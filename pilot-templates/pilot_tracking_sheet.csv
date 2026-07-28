@@ -1,0 +1,6 @@
+Tester ID,Name,Contact (Email / Phone),Task Title,Loom Video Link,Status,Payout Status,Poster Feedback Rating,Notes
+TST-001,Juan Dela Cruz,juan.delacruz@gmail.com / 09171234567,"Task 1: Account Creation & Sign Up",https://www.loom.com/share/sample-link-001,Approved,Paid,5/5,"Clear audio. Identified confusing error state during sign-up password validation."
+TST-002,Maria Santos,maria.santos@yahoo.com / 09189876543,"Task 2: Searching and Cart Management",https://www.loom.com/share/sample-link-002,Approved,Paid,4/5,"Spoke continuously out loud. Noted cart total calculation delay on mobile web."
+TST-003,Angelo Reyes,angelo.reyes@hotmail.com / 09201112222,"Task 3: Checkout and Mock Payment",https://www.loom.com/share/sample-link-003,Pending Review,Unpaid,N/A,"Submission received. Video duration 6m 12s. Waiting for Poster review."
+TST-004,Bea Tan,bea.tan@gmail.com / 09993334444,"Task 1: Account Creation & Sign Up",In Progress,Unpaid,N/A,"Tester onboarded; currently executing testing scenario."
+TST-005,Carlo Aquino,carlo.aquino@gmail.com / 09155556666,"Task 2: Searching and Cart Management",Rejected,Unpaid,1/5,"Video submitted had muted audio track. Requested resubmission with mic enabled."

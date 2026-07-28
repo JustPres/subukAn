@@ -1,0 +1,150 @@
+import crypto from 'crypto';
+
+export interface PaymentLinkResponse {
+  id: string;
+  url: string;
+  reference_number: string;
+  status: string;
+}
+
+export interface PayoutResponse {
+  id: string;
+  status: 'pending' | 'completed' | 'failed';
+  amount: number;
+  recipient_phone: string;
+}
+
+/**
+ * Creates a mock/stub payment link representing a PayMongo payment link.
+ * Converts amount to cents (e.g. PHP 50 -> 5000 cents).
+ * 
+ * @param amount Amount in Philippine Pesos (PHP)
+ * @param description Description of the listing / payment
+ * @param referenceId Listing ID to reference the payment
+ */
+export async function createPaymentLink(
+  amount: number,
+  description: string,
+  referenceId: string
+): Promise<PaymentLinkResponse> {
+  // Simulate network latency
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const amountInCents = Math.round(amount * 100);
+  const linkId = `link_${crypto.randomBytes(8).toString('hex')}`;
+  
+  // Create a realistic-looking mock checkout URL
+  const url = `https://checkout.paymongo.com/mock/${linkId}?ref=${referenceId}&amt=${amountInCents}`;
+
+  return {
+    id: linkId,
+    url,
+    reference_number: referenceId,
+    status: 'active',
+  };
+}
+
+/**
+ * Processes a mock GCash payout to a tester.
+ * 
+ * @param params Payout parameters including submission ID, amount (PHP), recipient phone, and idempotency key.
+ */
+export async function processGCashPayout(params: {
+  submissionId: string;
+  amount: number;
+  phoneNumber: string;
+  idempotencyKey: string;
+}): Promise<PayoutResponse> {
+  // Simulate network latency
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  // In a real PayMongo disbursement, we would post to /v1/disbursements
+  // We'll generate a mock processor transaction ID
+  const payoutId = `disb_${crypto.randomBytes(8).toString('hex')}`;
+
+  // Return a successful completion state for testing
+  return {
+    id: payoutId,
+    status: 'completed',
+    amount: params.amount,
+    recipient_phone: params.phoneNumber,
+  };
+}
+
+/**
+ * Verifies the signature of incoming PayMongo webhooks using HMAC SHA256.
+ * PayMongo headers format: t=<timestamp>,te=<test_signature>,li=<live_signature>
+ * 
+ * For testing and local development, if signatureHeader is 'mock-signature' 
+ * and NODE_ENV is not production, it skips verification and returns true.
+ * 
+ * @param rawBody The raw, unmodified HTTP request body as a string.
+ * @param signatureHeader The value of the 'paymongo-signature' header.
+ * @param webhookSecret The configured webhook signing secret key.
+ */
+export function verifyWebhookSignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  webhookSecret: string
+): boolean {
+  if (!signatureHeader) {
+    return false;
+  }
+
+  // Developer convenience: allow a mock header in development environments
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    signatureHeader === 'mock-signature'
+  ) {
+    return true;
+  }
+
+  if (!webhookSecret) {
+    console.error('PAYMONGO_WEBHOOK_SIGNING_SECRET is not configured.');
+    return false;
+  }
+
+  // Parse the PayMongo signature header format:
+  // e.g. t=1626789000,te=signature1,li=signature2
+  const parts = signatureHeader.split(',');
+  let timestamp = '';
+  let signature = '';
+
+  for (const part of parts) {
+    const [key, value] = part.split('=');
+    if (!key || !value) continue;
+    
+    if (key.trim() === 't') {
+      timestamp = value.trim();
+    } else if (key.trim() === 'te' || key.trim() === 'li') {
+      // Use test signature (te) or live signature (li)
+      // Preference given to live signature (li) if both are present
+      if (key.trim() === 'li') {
+        signature = value.trim();
+      } else if (key.trim() === 'te' && !signature) {
+        signature = value.trim();
+      }
+    }
+  }
+
+  if (!timestamp || !signature) {
+    return false;
+  }
+
+  try {
+    // PayMongo payload signature signature verification is: timestamp + "." + rawBody
+    const payload = `${timestamp}.${rawBody}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(payload)
+      .digest('hex');
+
+    return crypto.timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+  } catch (error) {
+    console.error('Error verifying webhook signature:', error);
+    return false;
+  }
+}

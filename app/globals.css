@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #2B6CB0;
+    --color-ink: #1E1E1E;
+    --color-slate: #5E5E5E;
+    --color-steel: #C2C2C2;
+    --color-canvas: #FCFBF9;
+
+    /* Notion-style status pastels */
+    --tint-open-bg: #E0F2FE;
+    --tint-open-text: #0369A1;
+
+    --tint-filling-bg: #FEF9C3;
+    --tint-filling-text: #A16207;
+
+    --tint-review-bg: #F3E8FF;
+    --tint-review-text: #6B21A8;
+
+    --tint-released-bg: #D1FAE5;
+    --tint-released-text: #065F46;
+
+    --tint-rejected-bg: #FFE4E6;
+    --tint-rejected-text: #9F1239;
+
+    --tint-expired-bg: #F3F4F6;
+    --tint-expired-text: #374151;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+}
+
+@layer utilities {
+  /* Color utility classes matching the design token specification */
+  .text-ink {
+    color: var(--color-ink);
+  }
+  .text-slate {
+    color: var(--color-slate);
+  }
+  .text-steel {
+    color: var(--color-steel);
+  }
+  .bg-canvas {
+    background-color: var(--color-canvas);
+  }
+  .text-primary-brand {
+    color: var(--color-primary);
+  }
+  .bg-primary-brand {
+    background-color: var(--color-primary);
+  }
+
+  /* Notion-Style Status Pastel Badges */
+  .badge-open {
+    background-color: var(--tint-open-bg);
+    color: var(--tint-open-text);
+  }
+
+  .badge-filling {
+    background-color: var(--tint-filling-bg);
+    color: var(--tint-filling-text);
+  }
+
+  .badge-review {
+    background-color: var(--tint-review-bg);
+    color: var(--tint-review-text);
+  }
+
+  .badge-released {
+    background-color: var(--tint-released-bg);
+    color: var(--tint-released-text);
+  }
+
+  .badge-rejected {
+    background-color: var(--tint-rejected-bg);
+    color: var(--tint-rejected-text);
+  }
+
+  .badge-expired {
+    background-color: var(--tint-expired-bg);
+    color: var(--tint-expired-text);
+  }
+
+  /* Rectangular Geometry Utility Classes */
+  .rounded-button {
+    border-radius: 8px;
+  }
+
+  .rounded-card {
+    border-radius: 12px;
+  }
+}

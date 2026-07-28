@@ -1,0 +1,972 @@
+'use client'
+
+import React, { useState, useEffect, useRef } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { 
+  ArrowLeft, 
+  Clock, 
+  Check, 
+  AlertCircle, 
+  CheckCircle, 
+  AlertTriangle,
+  Play,
+  Eye,
+  Lock,
+  Loader2,
+  Info
+} from 'lucide-react'
+import { createBrowserClient } from '@/lib/supabase/client'
+import { AgreementModal } from '@/components/shared/AgreementModal'
+import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
+import { TimerDisplay } from '@/components/shared/TimerDisplay'
+
+interface Listing {
+  id: string;
+  poster_id: string;
+  title: string;
+  description: string;
+  rate_per_tester: number;
+  slots_count: number;
+  total_budget: number;
+  review_window_minutes: number;
+  status: string;
+}
+
+interface Task {
+  id: string;
+  listing_id: string;
+  order_index: number;
+  question_text: string;
+  requires_recording: boolean;
+  requires_image: boolean;
+  type?: string;
+  timed_display_seconds?: number;
+  image_url?: string;
+  screenshot_url?: string;
+  target_screenshot_image_url?: string;
+}
+
+interface TaskResponseState {
+  answer_text: string;
+  completed_successfully: boolean;
+  difficulty_rating: number;
+}
+
+const NDA_CONTENT = `subukAn Tester Agreement & NDA - Five-Second Test
+
+By participating in this test, you agree to the following binding conditions:
+
+1. HONEST & HIGH-EFFORT COMPLETION: You must execute all tasks exactly as described. Payment is strictly subject to the poster's review. Submission of spam, low-effort summaries, or fake proofs will result in immediate disqualification and account flag.
+
+2. CONFIDENTIALITY: The application under test, its features, screenshots, and internal workings are strictly confidential. You may not distribute, discuss, or share any media, screenshots, recordings, or code outside the subukAn portal.
+
+3. TIMED VISUAL IMPRESSION RULES: You will be shown a design for exactly 5 seconds. You agree not to take screenshots, recordings, photos, or note down key details using secondary devices. The test must reflect your genuine, real-time memory and first impression.
+
+4. ESCROW RELEASES: Funds are held safely in escrow. Upon submission, the poster has up to 30 or 60 minutes to review. If they do not take action, payment is automatically released.
+
+Scroll down and review all terms to accept.`;
+
+export default function FiveSecondTestWorkspace() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+  const supabase = createBrowserClient();
+
+  // Lifecycle & Data States
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [submission, setSubmission] = useState<any>(null);
+
+  // Steps: 'loading' | 'unauthorized' | 'agreement' | 'cover' | 'viewing' | 'questionnaire' | 'submitted' | 'expired' | 'error'
+  const [currentStep, setCurrentStep] = useState<string>('loading');
+  const [submitting, setSubmitting] = useState(false);
+  const [ipAddress, setIpAddress] = useState('127.0.0.1');
+
+  // Five-Second Test Configuration
+  const [timedDisplaySeconds, setTimedDisplaySeconds] = useState(5);
+  const [targetImageUrl, setTargetImageUrl] = useState('');
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [viewTimeLeft, setViewTimeLeft] = useState(5);
+
+  // Questionnaire States
+  const [taskResponses, setTaskResponses] = useState<Record<string, TaskResponseState>>({});
+  const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
+  const [questionnaireTime, setQuestionnaireTime] = useState(0);
+
+  // Overall workspace listing time limit countdown
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  // Basic Fingerprint generator
+  const getFingerprint = () => {
+    if (typeof window === 'undefined') return '';
+    return `${navigator.userAgent}|${window.screen.width}x${window.screen.height}|${navigator.language}`;
+  };
+
+  // Client IP fetcher
+  useEffect(() => {
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => setIpAddress(data.ip))
+      .catch(() => {});
+  }, []);
+
+  // Initialize Page & Claim Slot
+  useEffect(() => {
+    if (!id) return;
+
+    const initWorkspace = async () => {
+      try {
+        // Session Check
+        const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr || !session || !session.user) {
+          setCurrentStep('unauthorized');
+          setLoading(false);
+          return;
+        }
+
+        const userId = session.user.id;
+
+        // Role Check
+        const { data: profile, error: profileErr } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single();
+
+        if (profileErr || !profile) {
+          setError('Failed to fetch user profile.');
+          setCurrentStep('error');
+          setLoading(false);
+          return;
+        }
+
+        if (profile.role !== 'tester') {
+          setCurrentStep('unauthorized');
+          setLoading(false);
+          return;
+        }
+
+        // Fetch Listing
+        const { data: listingData, error: listingErr } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (listingErr || !listingData) {
+          setError('Listing not found or failed to load.');
+          setCurrentStep('error');
+          setLoading(false);
+          return;
+        }
+
+        setListing(listingData);
+
+        // Fetch Tasks for the listing
+        const { data: tasksData, error: tasksErr } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('listing_id', id)
+          .order('order_index', { ascending: true });
+
+        if (tasksErr || !tasksData || tasksData.length === 0) {
+          setError('Failed to fetch testing tasks or no tasks defined.');
+          setCurrentStep('error');
+          setLoading(false);
+          return;
+        }
+
+        setTasks(tasksData);
+
+        // Extract timed impression task settings
+        const timedTask = tasksData.find(t => t.type === 'timed_impression' || t.timed_display_seconds || t.image_url || t.screenshot_url) || tasksData[0];
+        const displaySecs = timedTask?.timed_display_seconds || 5;
+        const imgUrl = timedTask?.image_url || timedTask?.screenshot_url || timedTask?.target_screenshot_image_url || '';
+
+        setTimedDisplaySeconds(displaySecs);
+        setViewTimeLeft(displaySecs);
+        setTargetImageUrl(imgUrl);
+
+        // Preload target screenshot image
+        if (imgUrl) {
+          const img = new Image();
+          img.src = imgUrl;
+          img.onload = () => {
+            setImageLoaded(true);
+          };
+          img.onerror = () => {
+            console.error('Failed to preload design screenshot.');
+            setImageLoaded(true); // Proceed anyway to avoid locking out the user
+          };
+        } else {
+          setImageLoaded(true);
+        }
+
+        // Initialize response inputs
+        const initialResponses: Record<string, TaskResponseState> = {};
+        tasksData.forEach(task => {
+          initialResponses[task.id] = {
+            answer_text: '',
+            completed_successfully: false,
+            difficulty_rating: 3
+          };
+        });
+        setTaskResponses(initialResponses);
+
+        // Check if there is an existing submission
+        const { data: submissionData, error: subErr } = await supabase
+          .from('submissions')
+          .select('*')
+          .eq('listing_id', id)
+          .eq('tester_id', userId)
+          .maybeSingle();
+
+        if (subErr) {
+          setError('Failed to query submission status.');
+          setCurrentStep('error');
+          setLoading(false);
+          return;
+        }
+
+        if (submissionData) {
+          setSubmission(submissionData);
+
+          if (submissionData.status === 'in_progress') {
+            setCurrentStep('cover');
+          } else if (['pending_review', 'approved', 'rejected'].includes(submissionData.status)) {
+            setCurrentStep('submitted');
+          } else if (submissionData.status === 'expired') {
+            setCurrentStep('expired');
+          }
+        } else {
+          // Check slot availability
+          const { count, error: countErr } = await supabase
+            .from('submissions')
+            .select('*', { count: 'exact', head: true })
+            .eq('listing_id', id)
+            .neq('status', 'expired');
+
+          if (countErr) {
+            setError('Failed to verify slot availability.');
+            setCurrentStep('error');
+            setLoading(false);
+            return;
+          }
+
+          if (count !== null && count >= listingData.slots_count) {
+            setError('All testing slots for this listing have been claimed.');
+            setCurrentStep('error');
+            setLoading(false);
+            return;
+          }
+
+          // Insert submission to claim slot
+          const { data: newSubmission, error: claimErr } = await supabase
+            .from('submissions')
+            .insert({
+              listing_id: id,
+              tester_id: userId,
+              status: 'in_progress',
+              started_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (claimErr || !newSubmission) {
+            setError('Failed to claim slot: ' + (claimErr?.message || 'Unknown error'));
+            setCurrentStep('error');
+            setLoading(false);
+            return;
+          }
+
+          setSubmission(newSubmission);
+          setCurrentStep('agreement');
+        }
+      } catch (err: any) {
+        console.error('Initialization error:', err);
+        setError(err.message || 'An unexpected error occurred during page load.');
+        setCurrentStep('error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Overall Listing Timer countdown
+  useEffect(() => {
+    if (!submission || !listing || !['cover', 'questionnaire'].includes(currentStep)) return;
+
+    const calculateTimeLeft = () => {
+      const startedAtTime = new Date(submission.started_at).getTime();
+      const durationMs = listing.review_window_minutes * 60 * 1000;
+      const elapsedMs = Date.now() - startedAtTime;
+      const remaining = Math.max(0, Math.floor((durationMs - elapsedMs) / 1000));
+      setSecondsLeft(remaining);
+
+      if (remaining <= 0) {
+        handleAutoSubmitOrExpire();
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submission, listing, currentStep]);
+
+  // Questionnaire step elapsed time tracker
+  useEffect(() => {
+    if (currentStep !== 'questionnaire') return;
+
+    const interval = setInterval(() => {
+      setQuestionnaireTime(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentStep]);
+
+  // Prevent copying, right-clicks, and F12 tools during active viewing
+  useEffect(() => {
+    if (currentStep !== 'viewing') return;
+
+    const preventCopy = (e: ClipboardEvent) => e.preventDefault();
+    const preventContextMenu = (e: MouseEvent) => e.preventDefault();
+    const preventKeys = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J')) ||
+        (e.ctrlKey && e.key === 'u') ||
+        (e.metaKey && e.altKey && e.key === 'i')
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('copy', preventCopy);
+    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('keydown', preventKeys);
+
+    return () => {
+      document.removeEventListener('copy', preventCopy);
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('keydown', preventKeys);
+    };
+  }, [currentStep]);
+
+  // 5-Second viewing countdown timer trigger
+  useEffect(() => {
+    if (currentStep !== 'viewing') return;
+
+    if (viewTimeLeft <= 0) {
+      setCurrentStep('questionnaire');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setViewTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [currentStep, viewTimeLeft]);
+
+  // NDA modal handlers
+  const handleAcceptAgreement = () => {
+    setCurrentStep('cover');
+  };
+
+  const handleDeclineAgreement = async () => {
+    if (submission) {
+      try {
+        await supabase
+          .from('submissions')
+          .update({ status: 'expired' })
+          .eq('id', submission.id);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    router.push('/dashboard/tester');
+  };
+
+  // Forfeit/Release slot manually
+  const handleForfeitSlot = async () => {
+    if (confirm('Are you sure you want to forfeit this slot? Any draft progress will be lost.')) {
+      await handleDeclineAgreement();
+    }
+  };
+
+  // State Change Helper Functions
+  const handleAnswerTextChange = (taskId: string, val: string) => {
+    setTaskResponses(prev => ({
+      ...prev,
+      [taskId]: {
+        ...(prev[taskId] || {
+          answer_text: '',
+          completed_successfully: false,
+          difficulty_rating: 3
+        }),
+        answer_text: val
+      }
+    }));
+  };
+
+  const handleDifficultyRatingChange = (taskId: string, val: number) => {
+    setTaskResponses(prev => ({
+      ...prev,
+      [taskId]: {
+        ...(prev[taskId] || {
+          answer_text: '',
+          completed_successfully: false,
+          difficulty_rating: 3
+        }),
+        difficulty_rating: val
+      }
+    }));
+  };
+
+  // Task checklist validation helper
+  const isTaskValid = (task: Task) => {
+    const response = taskResponses[task.id];
+    if (!response) return false;
+
+    const textValid = (response.answer_text || '').trim().length >= 10;
+    const ratingValid = response.difficulty_rating >= 1 && response.difficulty_rating <= 5;
+    const completedCheck = checkedTasks[task.id] === true;
+
+    return textValid && ratingValid && completedCheck;
+  };
+
+  // Checks validation rules for all questions
+  const isFormValid = () => {
+    if (!tasks || tasks.length === 0) return false;
+    return tasks.every(task => isTaskValid(task));
+  };
+
+  // Final submission processing
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid()) return;
+    await submitResponses('pending_review');
+  };
+
+  const handleAutoSubmitOrExpire = async () => {
+    if (currentStep !== 'questionnaire' && currentStep !== 'cover') return;
+
+    // Check if tester has filled out any content
+    const hasStartedAny = Object.values(taskResponses).some(
+      resp => (resp.answer_text || '').trim().length > 0
+    );
+
+    if (hasStartedAny) {
+      await submitResponses('pending_review');
+    } else {
+      if (submission) {
+        await supabase
+          .from('submissions')
+          .update({ status: 'expired' })
+          .eq('id', submission.id);
+      }
+      setCurrentStep('expired');
+    }
+  };
+
+  const submitResponses = async (finalStatus: 'pending_review' | 'expired') => {
+    if (!submission || !listing || !tasks) return;
+
+    setSubmitting(true);
+    try {
+      const responseRows = tasks.map(task => {
+        const resp = taskResponses[task.id];
+        return {
+          submission_id: submission.id,
+          task_id: task.id,
+          answer_text: resp?.answer_text || 'Auto-submitted due to timer expiration.',
+          completed_successfully: checkedTasks[task.id] || false,
+          time_on_task_seconds: Math.max(1, Math.min(7200, questionnaireTime)),
+          difficulty_rating: resp?.difficulty_rating || 3,
+          recording_url: null,
+          image_url: null
+        };
+      });
+
+      // Upsert answers to task_responses
+      const { error: insertErr } = await supabase
+        .from('task_responses')
+        .upsert(responseRows, { onConflict: 'submission_id,task_id' });
+
+      if (insertErr) {
+        throw new Error('Failed to save responses: ' + insertErr.message);
+      }
+
+      // Update submission status and release timestamps
+      const submittedAt = new Date();
+      const autoReleaseAt = new Date(submittedAt.getTime() + listing.review_window_minutes * 60 * 1000);
+
+      const { error: subUpdateErr } = await supabase
+        .from('submissions')
+        .update({
+          status: finalStatus,
+          submitted_at: submittedAt.toISOString(),
+          auto_release_at: autoReleaseAt.toISOString(),
+          device_fingerprint: getFingerprint(),
+          ip_address: ipAddress
+        })
+        .eq('id', submission.id);
+
+      if (subUpdateErr) {
+        throw new Error('Failed to update submission records: ' + subUpdateErr.message);
+      }
+
+      setCurrentStep(finalStatus === 'pending_review' ? 'submitted' : 'expired');
+    } catch (err: any) {
+      console.error('Submission failed:', err);
+      alert(err.message || 'An error occurred while saving your testing responses.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Base state loaders
+  if (currentStep === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-semibold text-gray-500 font-mono">Securing test slot...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStep === 'unauthorized') {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
+        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-md text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-100">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Access Restricted</h2>
+          <p className="text-sm text-gray-500">
+            Only verified users with the Tester role are permitted to view active workspaces.
+          </p>
+          <Link href="/dashboard" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStep === 'error') {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
+        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-md text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-100">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Workspace Error</h2>
+          <p className="text-sm text-gray-500">{error || 'An unexpected error occurred.'}</p>
+          <Link href="/dashboard/tester" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
+            Return to tasks
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStep === 'submitted' && listing) {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
+        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-lg text-center shadow-md space-y-6">
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
+            <CheckCircle className="w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-gray-900">Test Submitted Successfully!</h2>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed font-medium">
+              Your impression feedback has been compiled and is now pending review. The poster has up to{' '}
+              <span className="font-bold text-gray-800">{listing.review_window_minutes} minutes</span> to review.
+            </p>
+            <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-3 py-1.5 inline-block mt-4">
+              ₱{listing.rate_per_tester.toFixed(2)} is reserved in Escrow for your payout.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/tester"
+            className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-sm shadow-sm transition-all text-center"
+          >
+            Return to Tester Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStep === 'expired') {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
+        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-md text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-100">
+            <Clock className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Session Expired</h2>
+          <p className="text-sm text-gray-500">
+            The allotted testing time has elapsed and the slot has been automatically released.
+          </p>
+          <Link href="/dashboard/tester" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // NDA click-through agreement step
+  if (currentStep === 'agreement' && listing) {
+    return (
+      <AgreementModal
+        title={`Acknowledge Testing Guidelines: ${listing.title}`}
+        content={NDA_CONTENT}
+        onAccept={handleAcceptAgreement}
+        onDecline={handleDeclineAgreement}
+      />
+    );
+  }
+
+  // 1. Cover Page Step
+  if (currentStep === 'cover' && listing) {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] pb-16">
+        {secondsLeft !== null && secondsLeft > 0 && (
+          <TimerDisplay 
+            initialSeconds={secondsLeft} 
+            onExpire={handleAutoSubmitOrExpire} 
+          />
+        )}
+
+        <div className="max-w-3xl mx-auto px-6 pt-6">
+          <button 
+            onClick={handleForfeitSlot}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 bg-white border px-3 py-1.5 rounded-[8px] transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Forfeit Slot & Exit
+          </button>
+        </div>
+
+        <div className="max-w-3xl mx-auto px-6 mt-6">
+          <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm">
+            <EscrowStatusBar 
+              budget={listing.rate_per_tester} 
+              slots={listing.slots_count} 
+              status="active" 
+            />
+
+            <div className="p-8 space-y-6">
+              <div className="border-b border-gray-100 pb-5">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md inline-block mb-3">
+                  ⚡ Five-Second Impression Test
+                </span>
+                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-2 select-none">
+                  {listing.title}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Read instructions carefully. You must be focused and uninterrupted.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-100 rounded-[8px] p-5 select-none space-y-3">
+                <h3 className="font-bold text-sm text-gray-800">Test Context & Rules:</h3>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
+                  {listing.description}
+                </p>
+                <div className="pt-2 border-t border-gray-200/60 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium text-gray-500">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    <span>Display duration: <strong className="text-gray-700">{timedDisplaySeconds} seconds</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="w-4 h-4 text-gray-400" />
+                    <span>Focus check: <strong className="text-gray-700">Immediate response required</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border border-blue-100 bg-blue-50/50 rounded-xl p-5 flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-gray-900">How it works:</h4>
+                  <ul className="text-xs text-gray-600 list-disc list-inside space-y-1">
+                    <li>Clicking the button below will start the countdown and load the design.</li>
+                    <li>You will have exactly {timedDisplaySeconds} seconds to examine the page.</li>
+                    <li>Pay attention to layout, headers, branding, and who the product is for.</li>
+                    <li>Key keyboard and mouse shortcut operations are blocked to prevent content leaking.</li>
+                    <li>Once completed, the image is hidden permanently and the question fields appear.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleForfeitSlot}
+                  className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-sm font-semibold rounded-[8px] text-gray-700 transition-all"
+                >
+                  Forfeit Slot
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!imageLoaded}
+                  onClick={() => {
+                    setViewTimeLeft(timedDisplaySeconds);
+                    setCurrentStep('viewing');
+                  }}
+                  className="px-6 py-3 font-extrabold text-sm rounded-[8px] text-white bg-blue-600 hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                >
+                  {!imageLoaded ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading Image Assets...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-white" />
+                      Start {timedDisplaySeconds}-Second Test
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Timed Display Stage (Image viewing)
+  if (currentStep === 'viewing') {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 select-none relative overflow-hidden">
+        {/* Persistent Floating Header for Security & Display Timer */}
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-black/60 backdrop-blur rounded-[8px] border border-white/10 text-white text-xs font-mono font-bold">
+            <Lock className="w-3.5 h-3.5 text-rose-500" />
+            <span>Right-click & copy actions disabled</span>
+          </div>
+          
+          <div className="px-5 py-2.5 bg-blue-600 rounded-[8px] text-white text-lg font-mono font-extrabold shadow-lg animate-pulse flex items-center gap-2">
+            <Clock className="w-5 h-5 animate-spin" />
+            <span>Viewing: {viewTimeLeft}s</span>
+          </div>
+        </div>
+
+        {/* Centered Image display container */}
+        <div className="w-full max-w-5xl flex items-center justify-center p-4">
+          {targetImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={targetImageUrl}
+              alt="Design screenshot under review"
+              className="max-w-full max-h-[75vh] object-contain shadow-2xl border border-white/10 rounded-[8px] select-none pointer-events-none"
+              draggable={false}
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          ) : (
+            <div className="w-full h-80 max-w-2xl bg-gray-800 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-2 border border-dashed border-gray-700">
+              <Eye className="w-12 h-12 text-gray-500" />
+              <p className="text-sm font-semibold">Image screenshot URL not provided for this listing.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Security watermark footer */}
+        <div className="absolute bottom-4 text-[10px] tracking-widest uppercase font-bold text-white/20 select-none">
+          subukAn protected review session
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Questionnaire responses collection step
+  if (currentStep === 'questionnaire' && listing) {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] pb-16">
+        {secondsLeft !== null && secondsLeft > 0 && (
+          <TimerDisplay 
+            initialSeconds={secondsLeft} 
+            onExpire={handleAutoSubmitOrExpire} 
+          />
+        )}
+
+        <div className="max-w-4xl mx-auto px-6 pt-6">
+          <button 
+            onClick={handleForfeitSlot}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 bg-white border px-3 py-1.5 rounded-[8px] transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Forfeit Slot & Exit
+          </button>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-6 mt-6">
+          <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm flex flex-col">
+            <EscrowStatusBar 
+              budget={listing.rate_per_tester} 
+              slots={listing.slots_count} 
+              status="active" 
+            />
+
+            <div className="p-8 space-y-8">
+              <div className="border-b border-gray-100 pb-5">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md inline-block mb-3">
+                  📝 Impression Questionnaire
+                </span>
+                <h1 className="text-3xl font-extrabold tracking-tight mb-2 select-none">
+                  What do you remember about the design?
+                </h1>
+                <p className="text-sm text-gray-500 font-medium">
+                  Provide detailed feedback based on your visual memory. Complete all questions below.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-6">
+                  {tasks.map((task, index) => {
+                    const isCompleted = checkedTasks[task.id] || false;
+                    const response = taskResponses[task.id] || {
+                      answer_text: '',
+                      completed_successfully: false,
+                      difficulty_rating: 3
+                    };
+
+                    return (
+                      <div 
+                        key={task.id} 
+                        className="border border-gray-200 rounded-[12px] p-6 bg-white space-y-4 hover:border-blue-300 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCheckedTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
+                              }}
+                              className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${
+                                isCompleted 
+                                  ? 'bg-emerald-600 border-emerald-600 text-white' 
+                                  : 'border-gray-300 bg-white hover:border-gray-400'
+                              }`}
+                            >
+                              {isCompleted && <Check className="w-4 h-4" />}
+                            </button>
+                            <span className="font-bold text-gray-900 select-none">Impression {index + 1}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-sm text-gray-700 font-semibold select-none">
+                          {task.question_text}
+                        </p>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 select-none">
+                              Your Answer details (minimum 10 characters required)
+                            </label>
+                            <textarea
+                              value={response.answer_text}
+                              onChange={(e) => {
+                                handleAnswerTextChange(task.id, e.target.value);
+                                // Auto-toggle completion checkbox if text is valid
+                                if (e.target.value.trim().length >= 10) {
+                                  setCheckedTasks(prev => ({ ...prev, [task.id]: true }));
+                                }
+                              }}
+                              placeholder="Describe your first impression: brand, purpose, what stood out, what was confusing..."
+                              rows={3}
+                              className="w-full p-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-600 text-sm focus:ring-1 focus:ring-blue-600"
+                            />
+                            <div className="flex justify-between text-[11px] text-gray-400 mt-1 select-none">
+                              <span>Characters: {response.answer_text.length} / 10 required</span>
+                              {response.answer_text.length > 0 && response.answer_text.length < 10 && (
+                                <span className="text-rose-500 font-semibold">Too short</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 1-5 Difficulty score */}
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 select-none">
+                              How clear was this visual element?
+                            </label>
+                            <div className="flex gap-2">
+                              {[1, 2, 3, 4, 5].map((val) => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => handleDifficultyRatingChange(task.id, val)}
+                                  className={`w-9 h-9 rounded-[8px] border font-bold text-xs flex items-center justify-center transition-all ${
+                                    response.difficulty_rating === val
+                                      ? 'bg-blue-600 border-blue-600 text-white'
+                                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {val}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex justify-between text-[10px] text-gray-400 mt-1 max-w-[200px] select-none">
+                              <span>Very Unclear (1)</span>
+                              <span>Extremely Clear (5)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Submission Controls */}
+                <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handleForfeitSlot}
+                    className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-sm font-semibold rounded-[8px] text-gray-700 transition-all"
+                  >
+                    Forfeit Slot
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    {!isFormValid() && (
+                      <span className="text-xs text-gray-400 select-none">
+                        All check-boxes & answers must be completed.
+                      </span>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={!isFormValid() || submitting}
+                      className={`px-6 py-3 font-extrabold text-sm rounded-[8px] text-white shadow-sm transition-all ${
+                        isFormValid() && !submitting
+                          ? 'bg-blue-600 hover:bg-blue-700' 
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {submitting ? 'Submitting Responses...' : 'Submit Test Output'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}

@@ -1,0 +1,4 @@
+Txn ID,Submission ID,Recipient GCash,Amount Paid,Payout Date,GCash Reference Out
+TXN-001,SUB-001,"=VLOOKUP(VLOOKUP(B2, Submissions!$A:$C, 3, FALSE), Testers!$A:$C, 3, FALSE)","=VLOOKUP(VLOOKUP(B2, Submissions!$A:$B, 2, FALSE), Listings!$A:$E, 5, FALSE)",2026-07-28,20019283746
+TXN-002,SUB-002,"=VLOOKUP(VLOOKUP(B3, Submissions!$A:$C, 3, FALSE), Testers!$A:$C, 3, FALSE)","=VLOOKUP(VLOOKUP(B3, Submissions!$A:$B, 2, FALSE), Listings!$A:$E, 5, FALSE)",2026-07-29,20019283747
+TXN-003,SUB-003,"=VLOOKUP(VLOOKUP(B4, Submissions!$A:$C, 3, FALSE), Testers!$A:$C, 3, FALSE)","=VLOOKUP(VLOOKUP(B4, Submissions!$A:$B, 2, FALSE), Listings!$A:$E, 5, FALSE)",2026-07-30,20019283748

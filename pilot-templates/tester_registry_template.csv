@@ -1,0 +1,4 @@
+Tester ID,Tester Name,GCash Number,Device Type,Comfort Level,Verification Status,Verification Code
+TST-001,"Maria Santos","09181234567",Desktop,"Casual Tech User",Verified,7482
+TST-002,"Juan Dela Cruz","09171112222",Mobile,"Student Developer",Verified,1829
+TST-003,"Elena Ramos","09203334444",Desktop,"Non-Technical User",Verified,9301

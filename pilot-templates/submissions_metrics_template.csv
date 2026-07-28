@@ -1,0 +1,4 @@
+Submission ID,Listing ID,Tester ID,Video URL,Task 1 Status,Task 1 Duration (sec),Task 1 Rating,Task 2 Status,Task 2 Duration (sec),Task 2 Rating,Task 3 Status,Task 3 Duration (sec),Task 3 Rating,Total Duration (sec),Average Difficulty,Status,Review Reason,Review Details
+SUB-001,LST-002,TST-001,https://loom.com/share/xyz,Complete,135,2,Complete,105,1,Complete,180,4,"=SUM(F2, I2, L2)","=AVERAGE(G2, J2, M2)",Approved,N/A,"User navigated fine but found checkout slow."
+SUB-002,LST-003,TST-002,https://drive.google.com/file/d/1a2b3c4d5e/view?usp=sharing,Complete,120,3,Complete,150,2,Incomplete,240,5,"=SUM(F3, I3, L3)","=AVERAGE(G3, J3, M3)",Approved,N/A,"Struggled with checkout task before failing."
+SUB-003,LST-001,TST-003,https://loom.com/share/abc,Complete,180,1,Complete,90,2,Complete,150,1,"=SUM(F4, I4, L4)","=AVERAGE(G4, J4, M4)",Approved,N/A,"Very helpful. Quick walkthrough."
