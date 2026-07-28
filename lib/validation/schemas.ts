@@ -35,6 +35,13 @@ export const createListingSchema = z.object({
     errorMap: () => ({ message: 'Review window must be exactly 30 or 60 minutes.' }),
   }),
   
+  target_age_group: z.string().optional(),
+  target_gender: z.string().optional(),
+  target_employment_status: z.string().optional(),
+  target_tech_literacy: z.string().optional(),
+  is_quick_impression: z.boolean().default(false),
+  impression_duration_seconds: z.number().int().min(5).max(30).default(5).optional(),
+  
   questions: z.array(
     z.object({
       question_text: z.string()

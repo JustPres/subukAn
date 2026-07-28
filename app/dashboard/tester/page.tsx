@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { 
   ArrowLeft, 
@@ -14,11 +14,13 @@ import {
   Play,
   Square,
   UploadCloud,
-  Check
+  Check,
+  AlertCircle
 } from 'lucide-react'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
+import { createBrowserClient } from '@/lib/supabase/client'
 
 interface JobListing {
   id: string;
@@ -30,6 +32,11 @@ interface JobListing {
   requires_recording: boolean;
   requires_image: boolean;
   question_text: string;
+  is_quick_impression: boolean;
+  target_age_group?: string | null;
+  target_gender?: string | null;
+  target_employment_status?: string | null;
+  target_tech_literacy?: string | null;
 }
 
 const AVAILABLE_JOBS: JobListing[] = [
@@ -94,9 +101,15 @@ By participating in this test, you agree to the following binding conditions:
 Scroll down and review all terms to accept.`
 
 export default function TesterDashboard() {
+  const supabase = createBrowserClient()
+
   // Profiles states
   const [totalEarnings, setTotalEarnings] = useState(400)
   const [gcashNumber, setGcashNumber] = useState('0917-***-5678')
+  const [profile, setProfile] = useState<any>(null)
+  const [listings, setListings] = useState<JobListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingError, setLoadingError] = useState<string | null>(null)
   
   // Interactive UI state machine
   // 'idle' -> 'agreement' -> 'active_task' -> 'submitted'
@@ -109,6 +122,144 @@ export default function TesterDashboard() {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingUploaded, setRecordingUploaded] = useState(false)
   const [imageUploaded, setImageUploaded] = useState(false)
+
+  // Demo panel toggle state
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [profileAge, setProfileAge] = useState('')
+  const [profileGender, setProfileGender] = useState('')
+  const [profileEmployment, setProfileEmployment] = useState('')
+  const [profileTech, setProfileTech] = useState('')
+
+  const fetchProfileAndListings = useCallback(async () => {
+    setLoading(true)
+    setLoadingError(null)
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        setLoadingError('Authentication required.')
+        setLoading(false)
+        return
+      }
+
+      // 1. Fetch profile demographics
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        setLoadingError('Failed to retrieve user profile.')
+        setLoading(false)
+        return
+      }
+
+      setProfile(profileData)
+      setProfileAge(profileData.age_group || '')
+      setProfileGender(profileData.gender || '')
+      setProfileEmployment(profileData.employment_status || '')
+      setProfileTech(profileData.tech_literacy || '')
+
+      // Fetch tester earnings dynamically (from completed payouts)
+      const { data: payoutsData } = await supabase
+        .from('payouts')
+        .select('amount')
+        .eq('tester_id', user.id)
+        .eq('status', 'completed')
+
+      if (payoutsData) {
+        const total = payoutsData.reduce((sum, p) => sum + p.amount, 0)
+        setTotalEarnings(total)
+      }
+
+      // 2. Fetch all open listings
+      const { data: listingsData, error: listingsError } = await supabase
+        .from('listings')
+        .select(`
+          *,
+          tasks (
+            id,
+            question_text,
+            requires_recording,
+            requires_image
+          ),
+          submissions (
+            id,
+            status
+          )
+        `)
+        .eq('status', 'open')
+
+      if (listingsError) {
+        setLoadingError(listingsError.message)
+      } else {
+        const mapped = (listingsData || []).map((listing: any) => {
+          const firstTask = listing.tasks?.[0]
+          return {
+            id: listing.id,
+            title: listing.title,
+            description: listing.description,
+            rate_per_tester: listing.rate_per_tester,
+            slots_count: listing.slots_count,
+            slots_filled: listing.submissions 
+              ? listing.submissions.filter((s: any) => s.status !== 'expired' && s.status !== 'rejected').length 
+              : 0,
+            requires_recording: listing.tasks?.some((t: any) => t.requires_recording) || false,
+            requires_image: listing.tasks?.some((t: any) => t.requires_image) || false,
+            question_text: firstTask?.question_text || 'Provide feedback on this design.',
+            is_quick_impression: listing.is_quick_impression,
+            target_age_group: listing.target_age_group,
+            target_gender: listing.target_gender,
+            target_employment_status: listing.target_employment_status,
+            target_tech_literacy: listing.target_tech_literacy,
+          }
+        })
+
+        // 3. Filter listings based on demographic match
+        const filtered = mapped.filter((listing: any) => {
+          if (listing.target_age_group && listing.target_age_group !== profileData.age_group) return false
+          if (listing.target_gender && listing.target_gender !== profileData.gender) return false
+          if (listing.target_employment_status && listing.target_employment_status !== profileData.employment_status) return false
+          if (listing.target_tech_literacy && listing.target_tech_literacy !== profileData.tech_literacy) return false
+          return true
+        })
+
+        setListings(filtered)
+      }
+    } catch (err) {
+      setLoadingError(err instanceof Error ? err.message : 'An error occurred.')
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchProfileAndListings()
+  }, [fetchProfileAndListings])
+
+  const handleUpdateProfileDemographics = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!profile) return
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          age_group: profileAge || null,
+          gender: profileGender || null,
+          employment_status: profileEmployment || null,
+          tech_literacy: profileTech || null
+        })
+        .eq('id', profile.id)
+
+      if (error) throw error
+      setIsProfileModalOpen(false)
+      await fetchProfileAndListings()
+    } catch (err: any) {
+      alert('Failed to update profile: ' + err.message)
+    }
+  }
 
   const handleClaimSlot = (job: JobListing) => {
     setSelectedJob(job)
@@ -169,6 +320,34 @@ export default function TesterDashboard() {
     setImageUploaded(false)
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-semibold text-gray-500 font-mono">Loading Tester Dashboard...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (loadingError) {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
+        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-md text-center shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-100">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Dashboard Error</h2>
+          <p className="text-sm text-gray-500">{loadingError}</p>
+          <button onClick={() => fetchProfileAndListings()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-[8px]">
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-8 max-w-5xl mx-auto">
       {currentStep === 'idle' && (
@@ -188,7 +367,7 @@ export default function TesterDashboard() {
           </div>
 
           {/* Profile Summary & Verified GCash Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* GCash Verification */}
             <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex items-start gap-4">
               <div className="w-12 h-12 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -221,67 +400,109 @@ export default function TesterDashboard() {
                 </button>
               </div>
             </div>
+
+            {/* Demographic Profile summary */}
+            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex items-start gap-4">
+              <div className="w-12 h-12 rounded-[8px] bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 font-bold text-lg">
+                👤
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 mb-1">Demographics Profile</h3>
+                <div className="text-xs text-gray-600 space-y-0.5 mt-2">
+                  <div>Age: <span className="font-semibold text-gray-800">{profile?.age_group || 'Not set'}</span></div>
+                  <div>Gender: <span className="font-semibold text-gray-800">{profile?.gender || 'Not set'}</span></div>
+                  <div>Job: <span className="font-semibold text-gray-800">{profile?.employment_status || 'Not set'}</span></div>
+                  <div>Tech: <span className="font-semibold text-gray-800">{profile?.tech_literacy || 'Not set'}</span></div>
+                </div>
+                <button 
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="mt-3 text-xs font-semibold text-purple-600 hover:text-purple-800"
+                >
+                  Configure Demographics &rarr;
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Available Jobs Grid */}
           <div>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">Available Testing Slots</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {AVAILABLE_JOBS.map((job) => {
-                const isFull = job.slots_filled >= job.slots_count
-                return (
-                  <div 
-                    key={job.id} 
-                    className={`bg-white border rounded-[12px] p-6 flex flex-col justify-between shadow-sm transition-all duration-200 ${
-                      isFull ? 'border-gray-200 opacity-60' : 'border-gray-200 hover:border-emerald-500 hover:shadow-md'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="text-xl font-black text-emerald-700">₱{job.rate_per_tester}</span>
-                        <span className={`text-xs px-2.5 py-1 rounded-[8px] border font-bold ${
-                          isFull 
-                            ? 'bg-gray-100 text-gray-500 border-gray-200' 
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                        }`}>
-                          {isFull ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
-                        </span>
-                      </div>
-                      
-                      <h3 className="font-bold text-gray-900 text-lg mb-2">{job.title}</h3>
-                      <p className="text-sm text-gray-500 mb-4 line-clamp-2">{job.description}</p>
-
-                      {/* Deliverables details */}
-                      <div className="flex flex-wrap gap-3 mb-6">
-                        {job.requires_recording && (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-[8px]">
-                            <Video className="w-3.5 h-3.5" /> Screen Recording
-                          </span>
-                        )}
-                        {job.requires_image && (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-[8px]">
-                            <ImageIcon className="w-3.5 h-3.5" /> Screenshot
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <button
-                      disabled={isFull}
-                      onClick={() => handleClaimSlot(job)}
-                      className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all ${
-                        isFull 
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+            {listings.length === 0 ? (
+              <div className="bg-white border border-gray-200 rounded-[12px] p-12 text-center text-gray-500 shadow-sm space-y-3">
+                <p className="text-lg font-semibold text-gray-700">No matching tasks found</p>
+                <p className="text-sm text-gray-400 max-w-md mx-auto">
+                  Try updating your demographics profile above to unlock more target-matched jobs, or check back later.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {listings.map((job) => {
+                  const isFull = job.slots_filled >= job.slots_count
+                  return (
+                    <div 
+                      key={job.id} 
+                      className={`bg-white border rounded-[12px] p-6 flex flex-col justify-between shadow-sm transition-all duration-200 ${
+                        isFull ? 'border-gray-200 opacity-60' : 'border-gray-200 hover:border-emerald-500 hover:shadow-md'
                       }`}
                     >
-                      {isFull ? 'Unclickable (Full)' : 'Claim Slot'}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
+                          <span className="text-xl font-black text-emerald-700">₱{job.rate_per_tester}</span>
+                          <span className={`text-xs px-2.5 py-1 rounded-[8px] border font-bold ${
+                            isFull 
+                              ? 'bg-gray-100 text-gray-500 border-gray-200' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                          }`}>
+                            {isFull ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
+                          </span>
+                        </div>
+                        
+                        <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-1.5 flex-wrap">
+                          {job.title}
+                          {job.is_quick_impression && (
+                            <span className="text-[10px] font-bold tracking-wider uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md inline-block">
+                              ⚡ 5s Impression
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">{job.description}</p>
+  
+                        {/* Deliverables & Targets details */}
+                        <div className="flex flex-wrap gap-2 mb-6">
+                          {job.requires_recording && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
+                              <Video className="w-3 h-3" /> Screen Recording
+                            </span>
+                          )}
+                          {job.requires_image && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
+                              <ImageIcon className="w-3 h-3" /> Screenshot
+                            </span>
+                          )}
+                          {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-[8px] font-medium">
+                              🎯 Target Match
+                            </span>
+                          )}
+                        </div>
+                      </div>
+  
+                      <Link
+                        href={isFull ? '#' : (job.is_quick_impression ? `/dashboard/tester/tasks/five-second/${job.id}` : `/dashboard/tester/tasks/${job.id}`)}
+                        className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all flex items-center justify-center ${
+                          isFull 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 pointer-events-none'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                        }`}
+                      >
+                        {isFull ? 'Unclickable (Full)' : 'Claim Slot & Start Test'}
+                      </Link>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -505,6 +726,104 @@ export default function TesterDashboard() {
           >
             Acknowledge & Return to Dashboard
           </button>
+        </div>
+      )}
+
+      {/* Profile Demographics Modal */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[12px] w-full max-w-md shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="font-extrabold text-lg">Configure Profile Demographics</h3>
+              <button 
+                type="button"
+                onClick={() => setIsProfileModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProfileDemographics} className="p-6 space-y-4">
+              <p className="text-xs text-gray-500 mb-4">
+                Posters target specific demographics to test their applications. Provide accurate info to unlock target-matched tasks.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Age Group</label>
+                <select
+                  value={profileAge}
+                  onChange={e => setProfileAge(e.target.value)}
+                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
+                >
+                  <option value="">Not Specified</option>
+                  <option value="18-24">18 - 24 years old</option>
+                  <option value="25-34">25 - 34 years old</option>
+                  <option value="35-44">35 - 44 years old</option>
+                  <option value="45+">45+ years old</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Gender</label>
+                <select
+                  value={profileGender}
+                  onChange={e => setProfileGender(e.target.value)}
+                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
+                >
+                  <option value="">Not Specified</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Employment Status</label>
+                <select
+                  value={profileEmployment}
+                  onChange={e => setProfileEmployment(e.target.value)}
+                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
+                >
+                  <option value="">Not Specified</option>
+                  <option value="employed">Employed</option>
+                  <option value="unemployed">Unemployed</option>
+                  <option value="student">Student</option>
+                  <option value="self-employed">Self-Employed / Freelancer</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Tech Literacy Level</label>
+                <select
+                  value={profileTech}
+                  onChange={e => setProfileTech(e.target.value)}
+                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
+                >
+                  <option value="">Not Specified</option>
+                  <option value="non_technical">Non-Technical</option>
+                  <option value="casual_user">Casual User</option>
+                  <option value="student_dev">Developer / Technical</option>
+                </select>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-[8px] text-xs font-semibold shadow-sm transition-all"
+                >
+                  Save Demographics
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

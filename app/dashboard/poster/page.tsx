@@ -53,6 +53,16 @@ export default function PosterDashboard() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Demographic targeting states
+  const [targetAgeGroup, setTargetAgeGroup] = useState('')
+  const [targetGender, setTargetGender] = useState('')
+  const [targetEmploymentStatus, setTargetEmploymentStatus] = useState('')
+  const [targetTechLiteracy, setTargetTechLiteracy] = useState('')
+
+  // Quick impression state
+  const [isQuickImpression, setIsQuickImpression] = useState(false)
+  const [impressionDurationSeconds, setImpressionDurationSeconds] = useState<number>(5)
+
   // Fetch listings and user info
   const fetchUserAndListings = useCallback(async () => {
     setLoading(true)
@@ -149,7 +159,13 @@ export default function PosterDashboard() {
       slots_count: formSlots,
       total_budget: formRate * formSlots,
       review_window_minutes: formReviewWindow,
-      questions: formQuestions
+      questions: formQuestions,
+      target_age_group: targetAgeGroup || undefined,
+      target_gender: targetGender || undefined,
+      target_employment_status: targetEmploymentStatus || undefined,
+      target_tech_literacy: targetTechLiteracy || undefined,
+      is_quick_impression: isQuickImpression,
+      impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : undefined,
     }
 
     const validation = createListingSchema.safeParse(inputData)
@@ -178,7 +194,13 @@ export default function PosterDashboard() {
           slots_count: formSlots,
           total_budget: formRate * formSlots,
           review_window_minutes: formReviewWindow,
-          status: 'open'
+          status: 'open',
+          target_age_group: targetAgeGroup || null,
+          target_gender: targetGender || null,
+          target_employment_status: targetEmploymentStatus || null,
+          target_tech_literacy: targetTechLiteracy || null,
+          is_quick_impression: isQuickImpression,
+          impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : null,
         })
         .select()
         .single()
@@ -217,6 +239,12 @@ export default function PosterDashboard() {
       setFormQuestions([
         { question_text: 'Did the checkout screen display the correct GCash prompt?', requires_recording: true, requires_image: false }
       ])
+      setTargetAgeGroup('')
+      setTargetGender('')
+      setTargetEmploymentStatus('')
+      setTargetTechLiteracy('')
+      setIsQuickImpression(false)
+      setImpressionDurationSeconds(5)
       setIsModalOpen(false)
 
       // 4. Refresh listings
@@ -540,6 +568,105 @@ export default function PosterDashboard() {
                     60 minutes (Standard listing)
                   </label>
                 </div>
+              </div>
+
+              {/* Demographic Targeting */}
+              <div className="pt-4 border-t border-gray-100 space-y-4">
+                <h4 className="text-sm font-bold text-gray-800">Demographic Targeting (Optional)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Age Group</label>
+                    <select
+                      value={targetAgeGroup}
+                      onChange={e => setTargetAgeGroup(e.target.value)}
+                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                    >
+                      <option value="">All Age Groups</option>
+                      <option value="18-24">18 - 24 years old</option>
+                      <option value="25-34">25 - 34 years old</option>
+                      <option value="35-44">35 - 44 years old</option>
+                      <option value="45+">45+ years old</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Gender</label>
+                    <select
+                      value={targetGender}
+                      onChange={e => setTargetGender(e.target.value)}
+                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                    >
+                      <option value="">All Genders</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Employment Status</label>
+                    <select
+                      value={targetEmploymentStatus}
+                      onChange={e => setTargetEmploymentStatus(e.target.value)}
+                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                    >
+                      <option value="">All Employment Statuses</option>
+                      <option value="employed">Employed</option>
+                      <option value="unemployed">Unemployed</option>
+                      <option value="student">Student</option>
+                      <option value="self-employed">Self-Employed / Freelancer</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Tech Literacy</label>
+                    <select
+                      value={targetTechLiteracy}
+                      onChange={e => setTargetTechLiteracy(e.target.value)}
+                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                    >
+                      <option value="">All Literacy Levels</option>
+                      <option value="non_technical">Non-Technical</option>
+                      <option value="casual_user">Casual User</option>
+                      <option value="student_dev">Developer / Technical</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Impression Test Switch */}
+              <div className="pt-4 border-t border-gray-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-bold text-gray-800 block">5-Second Quick Impression Test</label>
+                    <span className="text-xs text-gray-400">Limit tester view time to capture pure visual recall.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isQuickImpression}
+                    onChange={e => setIsQuickImpression(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5 cursor-pointer"
+                  />
+                </div>
+
+                {isQuickImpression && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-[8px] space-y-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold text-gray-700">Impression Duration (Seconds):</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={30}
+                        value={impressionDurationSeconds}
+                        onChange={e => setImpressionDurationSeconds(Number(e.target.value))}
+                        className="w-20 p-1 border border-gray-200 rounded-[6px] text-xs focus:outline-none text-center bg-white"
+                      />
+                    </div>
+                    <p className="text-[11px] text-yellow-800 leading-normal">
+                      ⚠️ Testers will only have {impressionDurationSeconds} seconds to look at your site/image before it blurs. They cannot right-click or take manual screenshots.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Testing Questions Section */}

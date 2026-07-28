@@ -80,6 +80,44 @@ describe('Validation Schemas (lib/validation/index.ts)', () => {
       };
       expect(createListingSchema.safeParse(tooManyQuestions).success).toBe(false);
     });
+
+    it('should validate demographic targeting fields when present', () => {
+      const demographicData = {
+        ...validListingData,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_employment_status: 'employed',
+        target_tech_literacy: 'non_technical',
+      };
+      const result = createListingSchema.safeParse(demographicData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate quick impression fields when present', () => {
+      const quickImpressionData = {
+        ...validListingData,
+        is_quick_impression: true,
+        impression_duration_seconds: 10,
+      };
+      const result = createListingSchema.safeParse(quickImpressionData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid impression durations (<5 or >30)', () => {
+      const durationTooShort = {
+        ...validListingData,
+        is_quick_impression: true,
+        impression_duration_seconds: 4,
+      };
+      expect(createListingSchema.safeParse(durationTooShort).success).toBe(false);
+
+      const durationTooLong = {
+        ...validListingData,
+        is_quick_impression: true,
+        impression_duration_seconds: 31,
+      };
+      expect(createListingSchema.safeParse(durationTooLong).success).toBe(false);
+    });
   });
 
   describe('taskResponseSchema', () => {
