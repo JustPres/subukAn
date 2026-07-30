@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link'
 import { Shield, Lock, Eye, FileText, CheckCircle2, User, Database, ArrowLeft, Info, HelpCircle } from 'lucide-react'
 
@@ -9,7 +10,7 @@ export default function PrivacyPage() {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
-              <span className="bg-primary text-white text-md font-extrabold px-2 py-0.5 rounded-[4px] tracking-tight">sA</span>
+              <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-7 w-auto object-contain" />
               <span className="text-lg font-bold tracking-tight text-ink">subukAn</span>
             </Link>
           </div>

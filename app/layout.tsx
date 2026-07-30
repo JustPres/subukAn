@@ -7,6 +7,10 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'subukAn - Premium QA Crowdsourcing Platform',
   description: 'Connecting builders with expert testers for reliable, high-fidelity crowdsourced testing in the Philippines.',
+  icons: {
+    icon: '/subukantabico.ico',
+    shortcut: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({

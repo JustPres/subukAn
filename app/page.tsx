@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link'
 
 export default function Home() {
@@ -7,7 +8,7 @@ export default function Home() {
       <header className="border-b border-steel/30 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <span className="bg-primary text-white text-lg font-extrabold px-3 py-1 rounded-[4px] tracking-tight">sA</span>
+            <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-8 w-auto object-contain" />
             <span className="text-xl font-bold tracking-tight text-ink">subukAn</span>
           </div>
           <nav className="hidden md:flex space-x-8 text-sm font-medium text-slate">
@@ -366,7 +367,7 @@ export default function Home() {
       <footer className="bg-canvas border-t border-steel/20 mt-auto py-12">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate">
           <div className="flex items-center space-x-3">
-            <span className="bg-ink text-canvas text-xs font-bold px-2 py-0.5 rounded-[4px]">sA</span>
+            <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-6 w-auto object-contain opacity-80" />
             <span className="font-bold text-ink">subukAn</span>
             <span>&copy; {new Date().getFullYear()}</span>
           </div>
