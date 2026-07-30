@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import crypto from 'crypto';
 import {
   createPaymentLink,
@@ -6,7 +6,7 @@ import {
   verifyWebhookSignature,
 } from '@/lib/payment/paymongo';
 
-describe('PayMongo Payment Module', () => {
+describe.sequential('PayMongo Payment Module', () => {
   describe('createPaymentLink', () => {
     it('should generate a valid payment link response with amount converted to cents', async () => {
       const amount = 150;
@@ -22,6 +22,66 @@ describe('PayMongo Payment Module', () => {
       expect(result.url).toContain('https://checkout.paymongo.com/mock/');
       expect(result.url).toContain(`ref=${referenceId}`);
       expect(result.url).toContain(`amt=${amount * 100}`);
+    });
+
+    it('should call PayMongo API v1/links when not in sandbox mode', async () => {
+      const originalKey = process.env.PAYMONGO_SECRET_KEY;
+      process.env.PAYMONGO_SECRET_KEY = 'sk_live_actual_secret_key';
+
+      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              id: 'link_real_123',
+              attributes: {
+                url: 'https://paymongo.page.link/real_link',
+                reference_number: 'listing-uuid-123',
+                status: 'unpaid',
+              },
+            },
+          }),
+        } as Response;
+      });
+
+      try {
+        const result = await createPaymentLink(150, 'Test Description', 'listing-uuid-123');
+
+        expect(fetchSpy).toHaveBeenCalledWith(
+          'https://api.paymongo.com/v1/links',
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              'Authorization': 'Basic c2tfbGl2ZV9hY3R1YWxfc2VjcmV0X2tleTo=',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            }),
+            body: JSON.stringify({
+              data: {
+                attributes: {
+                  amount: 15000,
+                  description: 'Test Description',
+                  reference_number: 'listing-uuid-123',
+                },
+              },
+            }),
+          })
+        );
+
+        expect(result).toEqual({
+          id: 'link_real_123',
+          url: 'https://paymongo.page.link/real_link',
+          reference_number: 'listing-uuid-123',
+          status: 'unpaid',
+        });
+      } finally {
+        if (originalKey === undefined || originalKey === 'undefined') {
+          delete process.env.PAYMONGO_SECRET_KEY;
+        } else {
+          process.env.PAYMONGO_SECRET_KEY = originalKey;
+        }
+        fetchSpy.mockRestore();
+      }
     });
   });
 
@@ -41,6 +101,83 @@ describe('PayMongo Payment Module', () => {
       expect(result.status).toBe('completed');
       expect(result.amount).toBe(200);
       expect(result.recipient_phone).toBe('09171234567');
+    });
+
+    it('should call PayMongo API v1/disbursements when not in sandbox mode', async () => {
+      const originalKey = process.env.PAYMONGO_SECRET_KEY;
+      process.env.PAYMONGO_SECRET_KEY = 'sk_live_actual_secret_key';
+
+      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              id: 'disb_real_456',
+              attributes: {
+                status: 'pending',
+                amount: 20000,
+                recipient: {
+                  type: 'gcash',
+                  phone_number: '09171234567',
+                },
+              },
+            },
+          }),
+        } as Response;
+      });
+
+      try {
+        const params = {
+          submissionId: 'sub-123',
+          amount: 200,
+          phoneNumber: '09171234567',
+          idempotencyKey: 'idem-key-abc',
+        };
+
+        const result = await processGCashPayout(params);
+
+        expect(fetchSpy).toHaveBeenCalledWith(
+          'https://api.paymongo.com/v1/disbursements',
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              'Authorization': 'Basic c2tfbGl2ZV9hY3R1YWxfc2VjcmV0X2tleTo=',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Idempotency-Key': 'idem-key-abc',
+            }),
+            body: JSON.stringify({
+              data: {
+                attributes: {
+                  amount: 20000,
+                  recipient: {
+                    type: 'gcash',
+                    phone_number: '09171234567',
+                  },
+                  metadata: {
+                    submission_id: 'sub-123',
+                    idempotency_key: 'idem-key-abc',
+                  },
+                },
+              },
+            }),
+          })
+        );
+
+        expect(result).toEqual({
+          id: 'disb_real_456',
+          status: 'pending',
+          amount: 200,
+          recipient_phone: '09171234567',
+        });
+      } finally {
+        if (originalKey === undefined || originalKey === 'undefined') {
+          delete process.env.PAYMONGO_SECRET_KEY;
+        } else {
+          process.env.PAYMONGO_SECRET_KEY = originalKey;
+        }
+        fetchSpy.mockRestore();
+      }
     });
   });
 

@@ -10,7 +10,8 @@ import {
   Trash2, 
   AlertCircle,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Check
 } from 'lucide-react'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { createBrowserClient } from '@/lib/supabase/client'
@@ -39,6 +40,7 @@ export default function PosterDashboard() {
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
   // Form states for creating a new listing
   const [formTitle, setFormTitle] = useState('')
@@ -245,7 +247,10 @@ export default function PosterDashboard() {
       setTargetTechLiteracy('')
       setIsQuickImpression(false)
       setImpressionDurationSeconds(5)
-      setIsModalOpen(false)
+
+      const mockLinkId = `link_${Math.random().toString(36).substring(2, 10)}${Math.random().toString(36).substring(2, 10)}`;
+      const mockUrl = `https://checkout.paymongo.com/mock/${mockLinkId}?ref=${newListing.id}&amt=${newListing.total_budget * 100}`;
+      setCheckoutUrl(mockUrl);
 
       // 4. Refresh listings
       await fetchUserAndListings()
@@ -453,314 +458,345 @@ export default function PosterDashboard() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleCreateListingSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Errors Block */}
-              {(Object.keys(errors).length > 0 || submitError) && (
-                <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-[8px] flex gap-3 text-sm">
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  <div>
-                    <p className="font-semibold">Please correct the errors in the form:</p>
-                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
-                      {submitError && <li>{submitError}</li>}
-                      {Object.entries(errors).map(([key, msg]) => (
-                        <li key={key}>{msg}</li>
-                      ))}
-                    </ul>
-                  </div>
+            {checkoutUrl ? (
+              <div className="p-6 space-y-6 text-center overflow-y-auto flex-1">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+                  <Check className="w-6 h-6" />
                 </div>
-              )}
-
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-bold mb-1 text-gray-700">Listing Title</label>
-                <input
-                  type="text"
-                  value={formTitle}
-                  onChange={e => setFormTitle(e.target.value)}
-                  placeholder="e.g., Rider App Map Pin Accuracy Review"
-                  className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
-                  required
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-bold mb-1 text-gray-700">Description</label>
-                <textarea
-                  value={formDescription}
-                  onChange={e => setFormDescription(e.target.value)}
-                  placeholder="Describe step-by-step what the tester needs to do and check..."
-                  rows={4}
-                  className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Rate per Tester */}
                 <div>
-                  <label className="block text-sm font-bold mb-1 text-gray-700">Rate per Tester</label>
-                  <select
-                    value={formRate}
-                    onChange={e => setFormRate(Number(e.target.value))}
-                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none"
+                  <h3 className="font-extrabold text-lg">Listing Created & Pending Escrow</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Your testing round has been created. Complete the mock payment to activate your listing.
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 font-mono text-xs break-all text-blue-600 select-all">
+                  <a href={checkoutUrl} target="_blank" rel="noreferrer" id="mock-checkout-link" className="hover:underline">
+                    {checkoutUrl}
+                  </a>
+                </div>
+                <div className="flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckoutUrl(null);
+                      setIsModalOpen(false);
+                    }}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm"
                   >
-                    {CUSTOM_RATE_TIERS.map(tier => (
-                      <option key={tier} value={tier}>
-                        ₱{tier} per tester
-                      </option>
-                    ))}
-                  </select>
+                    Done
+                  </button>
                 </div>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateListingSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Errors Block */}
+                {(Object.keys(errors).length > 0 || submitError) && (
+                  <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-[8px] flex gap-3 text-sm">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <div>
+                      <p className="font-semibold">Please correct the errors in the form:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
+                        {submitError && <li>{submitError}</li>}
+                        {Object.entries(errors).map(([key, msg]) => (
+                          <li key={key}>{msg}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
-                {/* Slots Count */}
+                {/* Title */}
                 <div>
-                  <label className="block text-sm font-bold mb-1 text-gray-700 flex items-center gap-1">
-                    Slots Count 
-                    <span className="group relative">
-                      <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-pointer" />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] rounded p-2 w-48 hidden group-hover:block z-10 font-normal">
-                        Must be 1 (for preview round) or between 3 and 100.
-                      </span>
-                    </span>
-                  </label>
+                  <label className="block text-sm font-bold mb-1 text-gray-700">Listing Title</label>
                   <input
-                    type="number"
-                    value={formSlots}
-                    onChange={e => setFormSlots(Number(e.target.value))}
+                    type="text"
+                    value={formTitle}
+                    onChange={e => setFormTitle(e.target.value)}
+                    placeholder="e.g., Rider App Map Pin Accuracy Review"
                     className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
                     required
                   />
                 </div>
-              </div>
 
-              {/* Escrow Preview summary */}
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-[8px] flex items-center justify-between text-sm">
+                {/* Description */}
                 <div>
-                  <span className="text-gray-500 block">Total Escrow Budget to deposit</span>
-                  <span className="text-xs text-gray-400">Escrow verification: Rate x Slots</span>
-                </div>
-                <span className="text-xl font-black text-blue-800">₱{formRate * formSlots}</span>
-              </div>
-
-              {/* Review Window */}
-              <div>
-                <label className="block text-sm font-bold mb-1 text-gray-700">Poster Review Window</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="review_window"
-                      checked={formReviewWindow === 30}
-                      onChange={() => setFormReviewWindow(30)}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    30 minutes (Fast validation)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="review_window"
-                      checked={formReviewWindow === 60}
-                      onChange={() => setFormReviewWindow(60)}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    60 minutes (Standard listing)
-                  </label>
-                </div>
-              </div>
-
-              {/* Demographic Targeting */}
-              <div className="pt-4 border-t border-gray-100 space-y-4">
-                <h4 className="text-sm font-bold text-gray-800">Demographic Targeting (Optional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Age Group</label>
-                    <select
-                      value={targetAgeGroup}
-                      onChange={e => setTargetAgeGroup(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
-                    >
-                      <option value="">All Age Groups</option>
-                      <option value="18-24">18 - 24 years old</option>
-                      <option value="25-34">25 - 34 years old</option>
-                      <option value="35-44">35 - 44 years old</option>
-                      <option value="45+">45+ years old</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Gender</label>
-                    <select
-                      value={targetGender}
-                      onChange={e => setTargetGender(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
-                    >
-                      <option value="">All Genders</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Employment Status</label>
-                    <select
-                      value={targetEmploymentStatus}
-                      onChange={e => setTargetEmploymentStatus(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
-                    >
-                      <option value="">All Employment Statuses</option>
-                      <option value="employed">Employed</option>
-                      <option value="unemployed">Unemployed</option>
-                      <option value="student">Student</option>
-                      <option value="self-employed">Self-Employed / Freelancer</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Tech Literacy</label>
-                    <select
-                      value={targetTechLiteracy}
-                      onChange={e => setTargetTechLiteracy(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
-                    >
-                      <option value="">All Literacy Levels</option>
-                      <option value="non_technical">Non-Technical</option>
-                      <option value="casual_user">Casual User</option>
-                      <option value="student_dev">Developer / Technical</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Impression Test Switch */}
-              <div className="pt-4 border-t border-gray-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-bold text-gray-800 block">5-Second Quick Impression Test</label>
-                    <span className="text-xs text-gray-400">Limit tester view time to capture pure visual recall.</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={isQuickImpression}
-                    onChange={e => setIsQuickImpression(e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5 cursor-pointer"
+                  <label className="block text-sm font-bold mb-1 text-gray-700">Description</label>
+                  <textarea
+                    value={formDescription}
+                    onChange={e => setFormDescription(e.target.value)}
+                    placeholder="Describe step-by-step what the tester needs to do and check..."
+                    rows={4}
+                    className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
+                    required
                   />
                 </div>
 
-                {isQuickImpression && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-[8px] space-y-3">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-bold text-gray-700">Impression Duration (Seconds):</label>
-                      <input
-                        type="number"
-                        min={5}
-                        max={30}
-                        value={impressionDurationSeconds}
-                        onChange={e => setImpressionDurationSeconds(Number(e.target.value))}
-                        className="w-20 p-1 border border-gray-200 rounded-[6px] text-xs focus:outline-none text-center bg-white"
-                      />
-                    </div>
-                    <p className="text-[11px] text-yellow-800 leading-normal">
-                      ⚠️ Testers will only have {impressionDurationSeconds} seconds to look at your site/image before it blurs. They cannot right-click or take manual screenshots.
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Rate per Tester */}
+                  <div>
+                    <label className="block text-sm font-bold mb-1 text-gray-700">Rate per Tester</label>
+                    <select
+                      value={formRate}
+                      onChange={e => setFormRate(Number(e.target.value))}
+                      className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none"
+                    >
+                      {CUSTOM_RATE_TIERS.map(tier => (
+                        <option key={tier} value={tier}>
+                          ₱{tier} per tester
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
-              </div>
 
-              {/* Testing Questions Section */}
-              <div className="space-y-4 pt-4 border-t border-gray-100">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-bold text-gray-800">Testing Steps / Questions ({formQuestions.length})</label>
-                  <button
-                    type="button"
-                    onClick={handleAddQuestion}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800"
-                  >
-                    + Add Question
-                  </button>
+                  {/* Slots Count */}
+                  <div>
+                    <label className="block text-sm font-bold mb-1 text-gray-700 flex items-center gap-1">
+                      Slots Count 
+                      <span className="group relative">
+                        <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-pointer" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] rounded p-2 w-48 hidden group-hover:block z-10 font-normal">
+                          Must be 1 (for preview round) or between 3 and 100.
+                        </span>
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      value={formSlots}
+                      onChange={e => setFormSlots(Number(e.target.value))}
+                      className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  {formQuestions.map((q, idx) => (
-                    <div key={idx} className="p-4 border border-gray-100 bg-gray-50/55 rounded-[8px] relative space-y-3">
-                      {formQuestions.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveQuestion(idx)}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      
-                      <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1">Question {idx + 1}</label>
+                {/* Escrow Preview summary */}
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-[8px] flex items-center justify-between text-sm">
+                  <div>
+                    <span className="text-gray-500 block">Total Escrow Budget to deposit</span>
+                    <span className="text-xs text-gray-400">Escrow verification: Rate x Slots</span>
+                  </div>
+                  <span className="text-xl font-black text-blue-800">₱{formRate * formSlots}</span>
+                </div>
+
+                {/* Review Window */}
+                <div>
+                  <label className="block text-sm font-bold mb-1 text-gray-700">Poster Review Window</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="review_window"
+                        checked={formReviewWindow === 30}
+                        onChange={() => setFormReviewWindow(30)}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      30 minutes (Fast validation)
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="review_window"
+                        checked={formReviewWindow === 60}
+                        onChange={() => setFormReviewWindow(60)}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      60 minutes (Standard listing)
+                    </label>
+                  </div>
+                </div>
+
+                {/* Demographic Targeting */}
+                <div className="pt-4 border-t border-gray-100 space-y-4">
+                  <h4 className="text-sm font-bold text-gray-800">Demographic Targeting (Optional)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">Target Age Group</label>
+                      <select
+                        value={targetAgeGroup}
+                        onChange={e => setTargetAgeGroup(e.target.value)}
+                        className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                      >
+                        <option value="">All Age Groups</option>
+                        <option value="18-24">18 - 24 years old</option>
+                        <option value="25-34">25 - 34 years old</option>
+                        <option value="35-44">35 - 44 years old</option>
+                        <option value="45+">45+ years old</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">Target Gender</label>
+                      <select
+                        value={targetGender}
+                        onChange={e => setTargetGender(e.target.value)}
+                        className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                      >
+                        <option value="">All Genders</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">Target Employment Status</label>
+                      <select
+                        value={targetEmploymentStatus}
+                        onChange={e => setTargetEmploymentStatus(e.target.value)}
+                        className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                      >
+                        <option value="">All Employment Statuses</option>
+                        <option value="employed">Employed</option>
+                        <option value="unemployed">Unemployed</option>
+                        <option value="student">Student</option>
+                        <option value="self-employed">Self-Employed / Freelancer</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">Target Tech Literacy</label>
+                      <select
+                        value={targetTechLiteracy}
+                        onChange={e => setTargetTechLiteracy(e.target.value)}
+                        className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                      >
+                        <option value="">All Literacy Levels</option>
+                        <option value="non_technical">Non-Technical</option>
+                        <option value="casual_user">Casual User</option>
+                        <option value="student_dev">Developer / Technical</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Impression Test Switch */}
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-bold text-gray-800 block">5-Second Quick Impression Test</label>
+                      <span className="text-xs text-gray-400">Limit tester view time to capture pure visual recall.</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isQuickImpression}
+                      onChange={e => setIsQuickImpression(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5 cursor-pointer"
+                    />
+                  </div>
+
+                  {isQuickImpression && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-[8px] space-y-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-bold text-gray-700">Impression Duration (Seconds):</label>
                         <input
-                          type="text"
-                          value={q.question_text}
-                          onChange={e => handleQuestionTextChange(idx, e.target.value)}
-                          placeholder="e.g. Can you complete checkout and confirm GCash reference code matches?"
-                          className="w-full p-2 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white"
-                          required
+                          type="number"
+                          min={5}
+                          max={30}
+                          value={impressionDurationSeconds}
+                          onChange={e => setImpressionDurationSeconds(Number(e.target.value))}
+                          className="w-20 p-1 border border-gray-200 rounded-[6px] text-xs focus:outline-none text-center bg-white"
                         />
                       </div>
-
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={q.requires_recording}
-                            onChange={() => handleCheckboxChange(idx, 'requires_recording')}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          Requires Screen Recording
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={q.requires_image}
-                            onChange={() => handleCheckboxChange(idx, 'requires_image')}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          Requires Image Screenshot
-                        </label>
-                      </div>
+                      <p className="text-[11px] text-yellow-800 leading-normal">
+                        ⚠️ Testers will only have {impressionDurationSeconds} seconds to look at your site/image before it blurs. They cannot right-click or take manual screenshots.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="pt-4 border-t border-gray-200 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-sm font-semibold disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Funding...
-                    </>
-                  ) : (
-                    'Confirm and Fund'
                   )}
-                </button>
-              </div>
-            </form>
+                </div>
+
+                {/* Testing Questions Section */}
+                <div className="space-y-4 pt-4 border-t border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-bold text-gray-800">Testing Steps / Questions ({formQuestions.length})</label>
+                    <button
+                      type="button"
+                      onClick={handleAddQuestion}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                    >
+                      + Add Question
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {formQuestions.map((q, idx) => (
+                      <div key={idx} className="p-4 border border-gray-100 bg-gray-50/55 rounded-[8px] relative space-y-3">
+                        {formQuestions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveQuestion(idx)}
+                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Question {idx + 1}</label>
+                          <input
+                            type="text"
+                            value={q.question_text}
+                            onChange={e => handleQuestionTextChange(idx, e.target.value)}
+                            placeholder="e.g. Can you complete checkout and confirm GCash reference code matches?"
+                            className="w-full p-2 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white"
+                            required
+                          />
+                        </div>
+
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={q.requires_recording}
+                              onChange={() => handleCheckboxChange(idx, 'requires_recording')}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            Requires Screen Recording
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={q.requires_image}
+                              onChange={() => handleCheckboxChange(idx, 'requires_image')}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            Requires Image Screenshot
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="pt-4 border-t border-gray-200 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-sm font-semibold disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Funding...
+                      </>
+                    ) : (
+                      'Confirm and Fund'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

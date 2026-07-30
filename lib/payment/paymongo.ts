@@ -15,7 +15,24 @@ export interface PayoutResponse {
 }
 
 /**
- * Creates a mock/stub payment link representing a PayMongo payment link.
+ * Helper to determine if we are in sandbox / mock mode.
+ */
+function isSandboxMode(): boolean {
+  const secretKey = process.env.PAYMONGO_SECRET_KEY;
+  if (!secretKey || secretKey.trim() === '' || secretKey === 'undefined') {
+    return true;
+  }
+  if (secretKey.startsWith('mock_')) {
+    return true;
+  }
+  if (secretKey === 'sk_test_your_secret_key') {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Creates a payment link.
  * Converts amount to cents (e.g. PHP 50 -> 5000 cents).
  * 
  * @param amount Amount in Philippine Pesos (PHP)
@@ -27,25 +44,76 @@ export async function createPaymentLink(
   description: string,
   referenceId: string
 ): Promise<PaymentLinkResponse> {
-  // Simulate network latency
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  if (isSandboxMode()) {
+    // Simulate network latency
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
+    const amountInCents = Math.round(amount * 100);
+    const linkId = `link_${crypto.randomBytes(8).toString('hex')}`;
+    
+    // Create a realistic-looking mock checkout URL
+    const url = `https://checkout.paymongo.com/mock/${linkId}?ref=${referenceId}&amt=${amountInCents}`;
+
+    return {
+      id: linkId,
+      url,
+      reference_number: referenceId,
+      status: 'active',
+    };
+  }
+
+  const secretKey = process.env.PAYMONGO_SECRET_KEY || '';
   const amountInCents = Math.round(amount * 100);
-  const linkId = `link_${crypto.randomBytes(8).toString('hex')}`;
-  
-  // Create a realistic-looking mock checkout URL
-  const url = `https://checkout.paymongo.com/mock/${linkId}?ref=${referenceId}&amt=${amountInCents}`;
+  const authHeader = `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`;
+
+  const response = await fetch('https://api.paymongo.com/v1/links', {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      data: {
+        attributes: {
+          amount: amountInCents,
+          description,
+          reference_number: referenceId,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`PayMongo API error: ${response.status} - ${errorText}`);
+  }
+
+  interface PayMongoLinkResponseData {
+    id: string;
+    attributes: {
+      url: string;
+      reference_number?: string;
+      status: string;
+    };
+  }
+
+  interface PayMongoLinkResponseJson {
+    data: PayMongoLinkResponseData;
+  }
+
+  const resJson = (await response.json()) as PayMongoLinkResponseJson;
 
   return {
-    id: linkId,
-    url,
-    reference_number: referenceId,
-    status: 'active',
+    id: resJson.data.id,
+    url: resJson.data.attributes.url,
+    reference_number: resJson.data.attributes.reference_number || referenceId,
+    status: resJson.data.attributes.status,
   };
 }
 
 /**
- * Processes a mock GCash payout to a tester.
+ * Processes a GCash payout.
  * 
  * @param params Payout parameters including submission ID, amount (PHP), recipient phone, and idempotency key.
  */
@@ -55,19 +123,79 @@ export async function processGCashPayout(params: {
   phoneNumber: string;
   idempotencyKey: string;
 }): Promise<PayoutResponse> {
-  // Simulate network latency
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  if (isSandboxMode()) {
+    // Simulate network latency
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
-  // In a real PayMongo disbursement, we would post to /v1/disbursements
-  // We'll generate a mock processor transaction ID
-  const payoutId = `disb_${crypto.randomBytes(8).toString('hex')}`;
+    // We'll generate a mock processor transaction ID
+    const payoutId = `disb_${crypto.randomBytes(8).toString('hex')}`;
 
-  // Return a successful completion state for testing
+    // Return a successful completion state for testing
+    return {
+      id: payoutId,
+      status: 'completed',
+      amount: params.amount,
+      recipient_phone: params.phoneNumber,
+    };
+  }
+
+  const secretKey = process.env.PAYMONGO_SECRET_KEY || '';
+  const amountInCents = Math.round(params.amount * 100);
+  const authHeader = `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`;
+
+  const response = await fetch('https://api.paymongo.com/v1/disbursements', {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Idempotency-Key': params.idempotencyKey,
+    },
+    body: JSON.stringify({
+      data: {
+        attributes: {
+          amount: amountInCents,
+          recipient: {
+            type: 'gcash',
+            phone_number: params.phoneNumber,
+          },
+          metadata: {
+            submission_id: params.submissionId,
+            idempotency_key: params.idempotencyKey,
+          },
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`PayMongo API error: ${response.status} - ${errorText}`);
+  }
+
+  interface PayMongoPayoutResponseData {
+    id: string;
+    attributes: {
+      status: 'pending' | 'completed' | 'failed';
+      amount: number;
+      recipient: {
+        type: string;
+        phone_number: string;
+      };
+    };
+  }
+
+  interface PayMongoPayoutResponseJson {
+    data: PayMongoPayoutResponseData;
+  }
+
+  const resJson = (await response.json()) as PayMongoPayoutResponseJson;
+
   return {
-    id: payoutId,
-    status: 'completed',
-    amount: params.amount,
-    recipient_phone: params.phoneNumber,
+    id: resJson.data.id,
+    status: resJson.data.attributes.status,
+    amount: resJson.data.attributes.amount / 100,
+    recipient_phone: resJson.data.attributes.recipient.phone_number,
   };
 }
 

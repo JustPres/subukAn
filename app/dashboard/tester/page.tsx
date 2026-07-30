@@ -49,7 +49,8 @@ const AVAILABLE_JOBS: JobListing[] = [
     slots_filled: 3, // 2 slots left
     requires_recording: true,
     requires_image: true,
-    question_text: 'Did the checkout screen display the correct GCash prompt? Describe any delays.'
+    question_text: 'Did the checkout screen display the correct GCash prompt? Describe any delays.',
+    is_quick_impression: false
   },
   {
     id: 'j2',
@@ -60,7 +61,8 @@ const AVAILABLE_JOBS: JobListing[] = [
     slots_filled: 10, // 0 slots left (should be unclickable)
     requires_recording: true,
     requires_image: false,
-    question_text: 'Did the GPS pin lock onto your location accurately within 5 seconds?'
+    question_text: 'Did the GPS pin lock onto your location accurately within 5 seconds?',
+    is_quick_impression: false
   },
   {
     id: 'j3',
@@ -71,7 +73,8 @@ const AVAILABLE_JOBS: JobListing[] = [
     slots_filled: 0, // 3 slots left
     requires_recording: false,
     requires_image: true,
-    question_text: 'Did the camera scanner detect barcodes automatically without manual focus?'
+    question_text: 'Did the camera scanner detect barcodes automatically without manual focus?',
+    is_quick_impression: false
   },
   {
     id: 'j4',
@@ -82,7 +85,8 @@ const AVAILABLE_JOBS: JobListing[] = [
     slots_filled: 1, // 0 slots left (should be unclickable)
     requires_recording: true,
     requires_image: true,
-    question_text: 'Describe any responsiveness glitches or slow rendering times on button clicks.'
+    question_text: 'Describe any responsiveness glitches or slow rendering times on button clicks.',
+    is_quick_impression: false
   }
 ]
 

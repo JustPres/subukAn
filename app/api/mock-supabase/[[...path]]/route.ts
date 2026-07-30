@@ -1,0 +1,420 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+interface MockUser {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    role?: string;
+    full_name?: string;
+    device_type?: string;
+    tech_comfort_level?: string;
+    phone_verified?: boolean;
+    age_group?: string;
+  };
+  created_at?: string;
+}
+
+interface MockProfile {
+  id: string;
+  role?: string;
+  full_name?: string;
+  device_type?: string;
+  tech_comfort_level?: string;
+  phone_verified?: boolean;
+  age_group?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface MockListing {
+  id: string;
+  poster_id?: string;
+  title?: string;
+  description?: string;
+  rate_per_tester?: number;
+  slots_count?: number;
+  total_budget?: number;
+  status?: string;
+  submissions?: MockSubmission[];
+  tasks?: MockTask[];
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+interface MockTask {
+  id: string;
+  listing_id?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+interface MockSubmission {
+  id: string;
+  listing_id?: string;
+  tester_id?: string;
+  status?: string;
+  started_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+interface MockTaskResponse {
+  id: string;
+  submission_id?: string;
+  task_id?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+interface MockDb {
+  users: Map<string, MockUser>;
+  profiles: Map<string, MockProfile>;
+  listings: Map<string, MockListing>;
+  tasks: Map<string, MockTask>;
+  submissions: Map<string, MockSubmission>;
+  taskResponses: Map<string, MockTaskResponse>;
+}
+
+const globalRef = globalThis as typeof globalThis & { mockDb?: MockDb };
+if (!globalRef.mockDb) {
+  globalRef.mockDb = {
+    users: new Map<string, MockUser>(),
+    profiles: new Map<string, MockProfile>(),
+    listings: new Map<string, MockListing>(),
+    tasks: new Map<string, MockTask>(),
+    submissions: new Map<string, MockSubmission>(),
+    taskResponses: new Map<string, MockTaskResponse>(),
+  };
+}
+const db = globalRef.mockDb;
+
+function getResponsePayload(data: unknown, prefersObject: boolean): unknown {
+  if (prefersObject) {
+    if (Array.isArray(data)) {
+      return data.length > 0 ? data[0] : null;
+    }
+    return data;
+  }
+  if (!Array.isArray(data)) {
+    return [data];
+  }
+  return data;
+}
+
+interface RequestBody {
+  id?: string;
+  email?: string;
+  user_metadata?: {
+    role?: string;
+    full_name?: string;
+    device_type?: string;
+    tech_comfort_level?: string;
+    phone_verified?: boolean;
+    age_group?: string;
+  };
+  title?: string;
+  description?: string;
+  rate_per_tester?: number;
+  slots_count?: number;
+  total_budget?: number;
+  status?: string;
+  started_at?: string;
+  submission_id?: string;
+  task_id?: string;
+  [key: string]: unknown;
+}
+
+export async function GET(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  const path = params.path?.join('/') || '';
+  const url = new URL(request.url);
+  const acceptHeader = request.headers.get('Accept') || '';
+  const prefersObject = acceptHeader.includes('vnd.pgrst.object');
+
+  // 1. Auth GET user
+  if (path === 'auth/v1/user') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    const userId = token.replace('mock-access-token-', '');
+    const user = db.users.get(userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    return NextResponse.json(user);
+  }
+
+  // 2. Auth GET admin list users
+  if (path === 'auth/v1/admin/users') {
+    return NextResponse.json({ users: Array.from(db.users.values()) });
+  }
+
+  // 3. REST profiles
+  if (path === 'rest/v1/profiles') {
+    const idParam = url.searchParams.get('id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const profile = db.profiles.get(id);
+      return NextResponse.json(getResponsePayload(profile, prefersObject));
+    }
+    return NextResponse.json(Array.from(db.profiles.values()));
+  }
+
+  // 4. REST listings
+  if (path === 'rest/v1/listings') {
+    const statusParam = url.searchParams.get('status');
+    const posterParam = url.searchParams.get('poster_id');
+    const idParam = url.searchParams.get('id');
+
+    let list = Array.from(db.listings.values());
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const listing = db.listings.get(id);
+      list = listing ? [listing] : [];
+    } else {
+      if (statusParam && statusParam.startsWith('eq.')) {
+        const status = statusParam.substring(3);
+        list = list.filter(l => l.status === status);
+      }
+      if (posterParam && posterParam.startsWith('eq.')) {
+        const posterId = posterParam.substring(3);
+        list = list.filter(l => l.poster_id === posterId);
+      }
+    }
+
+    const select = url.searchParams.get('select') || '';
+    const result = list.map(listing => {
+      const copy: MockListing = { ...listing };
+      if (select.includes('submissions')) {
+        copy.submissions = Array.from(db.submissions.values()).filter(s => s.listing_id === listing.id);
+      }
+      if (select.includes('tasks')) {
+        copy.tasks = Array.from(db.tasks.values()).filter(t => t.listing_id === listing.id);
+      }
+      return copy;
+    });
+
+    return NextResponse.json(getResponsePayload(result, prefersObject));
+  }
+
+  // 5. REST tasks
+  if (path === 'rest/v1/tasks') {
+    const listingParam = url.searchParams.get('listing_id');
+    let list = Array.from(db.tasks.values());
+    if (listingParam && listingParam.startsWith('eq.')) {
+      const listingId = listingParam.substring(3);
+      list = list.filter(t => t.listing_id === listingId);
+    }
+    return NextResponse.json(getResponsePayload(list, prefersObject));
+  }
+
+  // 6. REST submissions
+  if (path === 'rest/v1/submissions') {
+    const listingParam = url.searchParams.get('listing_id');
+    const testerParam = url.searchParams.get('tester_id');
+
+    let list = Array.from(db.submissions.values());
+    if (listingParam && listingParam.startsWith('eq.')) {
+      const listingId = listingParam.substring(3);
+      list = list.filter(s => s.listing_id === listingId);
+    }
+    if (testerParam && testerParam.startsWith('eq.')) {
+      const testerId = testerParam.substring(3);
+      list = list.filter(s => s.tester_id === testerId);
+    }
+
+    return NextResponse.json(getResponsePayload(list, prefersObject));
+  }
+
+  // 7. REST payouts
+  if (path === 'rest/v1/payouts') {
+    return NextResponse.json([]);
+  }
+
+  return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+}
+
+export async function POST(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  const path = params.path?.join('/') || '';
+  const body = await request.json().catch(() => ({})) as RequestBody;
+  const acceptHeader = request.headers.get('Accept') || '';
+  const prefersObject = acceptHeader.includes('vnd.pgrst.object');
+
+  // 1. Auth Admin Create User
+  if (path === 'auth/v1/admin/users') {
+    const userId = body.id || `user_${Math.random().toString(36).substring(2, 12)}`;
+    const user: MockUser = {
+      id: userId,
+      email: body.email,
+      user_metadata: body.user_metadata || {},
+      created_at: new Date().toISOString(),
+    };
+    db.users.set(userId, user);
+
+    const profile: MockProfile = {
+      id: userId,
+      role: body.user_metadata?.role || 'tester',
+      full_name: body.user_metadata?.full_name || '',
+      device_type: body.user_metadata?.device_type || 'desktop',
+      tech_comfort_level: body.user_metadata?.tech_comfort_level || 'casual_user',
+      phone_verified: body.user_metadata?.phone_verified || true,
+      age_group: body.user_metadata?.age_group || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.profiles.set(userId, profile);
+
+    return NextResponse.json({ user });
+  }
+
+  // 2. Auth Sign In with password
+  if (path === 'auth/v1/token') {
+    const email = body.email;
+    const user = Array.from(db.users.values()).find(u => u.email === email);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 400 });
+    }
+    const session = {
+      access_token: `mock-access-token-${user.id}`,
+      refresh_token: 'mock-refresh-token',
+      user,
+      expires_in: 3600,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    };
+    return NextResponse.json(session);
+  }
+
+  // 3. REST profiles upsert
+  if (path === 'rest/v1/profiles') {
+    const data = body;
+    const profileId = String(data.id || '');
+    const profile: MockProfile = {
+      id: profileId,
+      role: String(data.role || 'tester'),
+      full_name: String(data.full_name || ''),
+      device_type: String(data.device_type || 'desktop'),
+      tech_comfort_level: String(data.tech_comfort_level || 'casual_user'),
+      phone_verified: Boolean(data.phone_verified ?? true),
+      age_group: data.age_group ? String(data.age_group) : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.profiles.set(profileId, profile);
+    return NextResponse.json(getResponsePayload(profile, prefersObject));
+  }
+
+  // 4. REST listings insert
+  if (path === 'rest/v1/listings') {
+    const listingId = body.id || `listing_${Math.random().toString(36).substring(2, 12)}`;
+    const listing: MockListing = {
+      id: listingId,
+      ...body,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.listings.set(listingId, listing);
+    return NextResponse.json(getResponsePayload(listing, prefersObject));
+  }
+
+  // 5. REST tasks insert
+  if (path === 'rest/v1/tasks') {
+    const isArray = Array.isArray(body);
+    const data = isArray ? (body as unknown as MockTask[]) : [body as unknown as MockTask];
+    const inserted = data.map(t => {
+      const taskId = String(t.id || `task_${Math.random().toString(36).substring(2, 12)}`);
+      const task: MockTask = {
+        ...t,
+        id: taskId,
+        created_at: new Date().toISOString(),
+      };
+      db.tasks.set(taskId, task);
+      return task;
+    });
+    return NextResponse.json(getResponsePayload(inserted, prefersObject));
+  }
+
+  // 6. REST submissions insert
+  if (path === 'rest/v1/submissions') {
+    const submissionId = body.id || `submission_${Math.random().toString(36).substring(2, 12)}`;
+    const submission: MockSubmission = {
+      id: submissionId,
+      ...body,
+      started_at: body.started_at || new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    };
+    db.submissions.set(submissionId, submission);
+    return NextResponse.json(getResponsePayload(submission, prefersObject));
+  }
+
+  // 7. REST task_responses upsert
+  if (path === 'rest/v1/task_responses') {
+    const isArray = Array.isArray(body);
+    const data = isArray ? (body as unknown as MockTaskResponse[]) : [body as unknown as MockTaskResponse];
+    const inserted = data.map(tr => {
+      const key = `${tr.submission_id}_${tr.task_id}`;
+      const responseId = String(tr.id || `response_${Math.random().toString(36).substring(2, 12)}`);
+      const response: MockTaskResponse = {
+        ...tr,
+        id: responseId,
+        created_at: new Date().toISOString(),
+      };
+      db.taskResponses.set(key, response);
+      return response;
+    });
+    return NextResponse.json(getResponsePayload(inserted, prefersObject));
+  }
+
+  return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  const path = params.path?.join('/') || '';
+  const url = new URL(request.url);
+  const body = await request.json().catch(() => ({})) as RequestBody;
+  const acceptHeader = request.headers.get('Accept') || '';
+  const prefersObject = acceptHeader.includes('vnd.pgrst.object');
+
+  // 1. REST submissions update
+  if (path === 'rest/v1/submissions') {
+    const idParam = url.searchParams.get('id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const sub = db.submissions.get(id);
+      if (sub) {
+        const updated: MockSubmission = {
+          ...sub,
+          ...body,
+          updated_at: new Date().toISOString(),
+        };
+        db.submissions.set(id, updated);
+        return NextResponse.json(getResponsePayload(updated, prefersObject));
+      }
+    }
+  }
+
+  return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+}
+
+export async function PUT(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  return POST(request, { params });
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  const path = params.path?.join('/') || '';
+  const url = new URL(request.url);
+
+  if (path === 'rest/v1/listings') {
+    const titleParam = url.searchParams.get('title');
+    if (titleParam && titleParam.startsWith('eq.')) {
+      const title = titleParam.substring(3);
+      db.listings.forEach((listing, id) => {
+        if (listing.title === title) {
+          db.listings.delete(id);
+        }
+      });
+    }
+    return new NextResponse(null, { status: 204 });
+  }
+
+  return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+}
