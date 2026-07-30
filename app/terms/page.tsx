@@ -8,10 +8,9 @@ export default function TermsPage() {
       {/* Navigation */}
       <header className="border-b border-steel/30 bg-white sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
-              <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-7 w-auto object-contain" />
-              <span className="text-lg font-bold tracking-tight text-ink">subukAn</span>
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+              <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-10 w-auto object-contain" />
             </Link>
           </div>
           <nav className="text-xs font-semibold text-slate flex items-center space-x-4">

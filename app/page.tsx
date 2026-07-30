@@ -7,9 +7,8 @@ export default function Home() {
       {/* Navigation */}
       <header className="border-b border-steel/30 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-8 w-auto object-contain" />
-            <span className="text-xl font-bold tracking-tight text-ink">subukAn</span>
+          <div className="flex items-center">
+            <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-12 w-auto object-contain" />
           </div>
           <nav className="hidden md:flex space-x-8 text-sm font-medium text-slate">
             <a href="#how-it-works" className="hover:text-ink transition-colors">How it Works</a>
@@ -367,8 +366,7 @@ export default function Home() {
       <footer className="bg-canvas border-t border-steel/20 mt-auto py-12">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate">
           <div className="flex items-center space-x-3">
-            <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-6 w-auto object-contain opacity-80" />
-            <span className="font-bold text-ink">subukAn</span>
+            <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-8 w-auto object-contain opacity-80" />
             <span>&copy; {new Date().getFullYear()}</span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
