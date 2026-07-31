@@ -4,8 +4,14 @@ import { loadEnvConfig } from '@next/env';
 // Load environment variables exactly like Next.js does
 loadEnvConfig(process.cwd());
 
+// Point to the local in-memory Mock Supabase API route for E2E testing
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:3000/api/mock-supabase';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'mock-anon-key';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-service-role-key';
+
 export default defineConfig({
   testDir: './tests/e2e',
+  timeout: 60 * 1000,
   /* Do not run tests in parallel to protect Supabase DB concurrency */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
