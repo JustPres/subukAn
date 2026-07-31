@@ -22,6 +22,7 @@ interface MockProfile {
   tech_comfort_level?: string;
   phone_verified?: boolean;
   age_group?: string | null;
+  accessibility_tags?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -37,6 +38,9 @@ interface MockListing {
   status?: string;
   submissions?: MockSubmission[];
   tasks?: MockTask[];
+  variants?: any[];
+  target_accessibility_tags?: string[];
+  parent_listing_id?: string | null;
   created_at?: string;
   updated_at?: string;
   [key: string]: unknown;
@@ -54,6 +58,7 @@ interface MockSubmission {
   listing_id?: string;
   tester_id?: string;
   status?: string;
+  assigned_variant_id?: string | null;
   started_at?: string;
   created_at?: string;
   updated_at?: string;
@@ -64,8 +69,21 @@ interface MockTaskResponse {
   id: string;
   submission_id?: string;
   task_id?: string;
+  first_click_x?: number | null;
+  first_click_y?: number | null;
+  first_click_time_ms?: number | null;
+  first_click_screen_width?: number | null;
+  first_click_screen_height?: number | null;
   created_at?: string;
   [key: string]: unknown;
+}
+
+interface MockComment {
+  id: string;
+  submission_id: string;
+  user_id: string;
+  comment_text: string;
+  created_at: string;
 }
 
 interface MockDb {
@@ -75,6 +93,7 @@ interface MockDb {
   tasks: Map<string, MockTask>;
   submissions: Map<string, MockSubmission>;
   taskResponses: Map<string, MockTaskResponse>;
+  submissionComments: Map<string, MockComment>;
 }
 
 const globalRef = globalThis as typeof globalThis & { mockDb?: MockDb };
@@ -86,6 +105,7 @@ if (!globalRef.mockDb) {
     tasks: new Map<string, MockTask>(),
     submissions: new Map<string, MockSubmission>(),
     taskResponses: new Map<string, MockTaskResponse>(),
+    submissionComments: new Map<string, MockComment>(),
   };
 }
 const db = globalRef.mockDb;
@@ -165,6 +185,7 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
     const statusParam = url.searchParams.get('status');
     const posterParam = url.searchParams.get('poster_id');
     const idParam = url.searchParams.get('id');
+    const parentParam = url.searchParams.get('parent_listing_id');
 
     let list = Array.from(db.listings.values());
     if (idParam && idParam.startsWith('eq.')) {
@@ -179,6 +200,10 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
       if (posterParam && posterParam.startsWith('eq.')) {
         const posterId = posterParam.substring(3);
         list = list.filter(l => l.poster_id === posterId);
+      }
+      if (parentParam && parentParam.startsWith('eq.')) {
+        const parentId = parentParam.substring(3);
+        list = list.filter(l => l.parent_listing_id === parentId);
       }
     }
 
@@ -229,6 +254,28 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
   // 7. REST payouts
   if (path === 'rest/v1/payouts') {
     return NextResponse.json([]);
+  }
+
+  // 8. REST submission_comments
+  if (path === 'rest/v1/submission_comments') {
+    const submissionParam = url.searchParams.get('submission_id');
+    let list = Array.from(db.submissionComments.values());
+    if (submissionParam && submissionParam.startsWith('eq.')) {
+      const subId = submissionParam.substring(3);
+      list = list.filter(c => c.submission_id === subId);
+    }
+    list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const commentsWithProfiles = list.map(c => {
+      const profile = db.profiles.get(c.user_id) || { full_name: 'User Tester', role: 'tester' };
+      return {
+        ...c,
+        profiles: {
+          full_name: profile.full_name || 'User Tester',
+          role: profile.role || 'tester'
+        }
+      };
+    });
+    return NextResponse.json(getResponsePayload(commentsWithProfiles, prefersObject));
   }
 
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });
@@ -296,6 +343,7 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       tech_comfort_level: String(data.tech_comfort_level || 'casual_user'),
       phone_verified: Boolean(data.phone_verified ?? true),
       age_group: data.age_group ? String(data.age_group) : null,
+      accessibility_tags: Array.isArray(data.accessibility_tags) ? data.accessibility_tags : [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -309,6 +357,9 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
     const listing: MockListing = {
       id: listingId,
       ...body,
+      variants: Array.isArray(body.variants) ? body.variants : [],
+      target_accessibility_tags: Array.isArray(body.target_accessibility_tags) ? body.target_accessibility_tags : [],
+      parent_listing_id: body.parent_listing_id || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -335,10 +386,19 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
 
   // 6. REST submissions insert
   if (path === 'rest/v1/submissions') {
+    const listingId = body.listing_id ? String(body.listing_id) : '';
+    const listing = db.listings.get(listingId);
+    let assignedVariantId = body.assigned_variant_id || null;
+    if (!assignedVariantId && listing && Array.isArray(listing.variants) && listing.variants.length > 0) {
+      const idx = Math.floor(Math.random() * listing.variants.length);
+      assignedVariantId = listing.variants[idx].id || String(idx);
+    }
+
     const submissionId = body.id || `submission_${Math.random().toString(36).substring(2, 12)}`;
     const submission: MockSubmission = {
       id: submissionId,
       ...body,
+      assigned_variant_id: assignedVariantId,
       started_at: body.started_at || new Date().toISOString(),
       created_at: new Date().toISOString(),
     };
@@ -362,6 +422,20 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       return response;
     });
     return NextResponse.json(getResponsePayload(inserted, prefersObject));
+  }
+
+  // 8. REST submission_comments insert
+  if (path === 'rest/v1/submission_comments') {
+    const commentId = body.id || `comment_${Math.random().toString(36).substring(2, 12)}`;
+    const comment: MockComment = {
+      id: commentId,
+      submission_id: String(body.submission_id || ''),
+      user_id: String(body.user_id || ''),
+      comment_text: String(body.comment_text || ''),
+      created_at: new Date().toISOString(),
+    };
+    db.submissionComments.set(commentId, comment);
+    return NextResponse.json(getResponsePayload(comment, prefersObject));
   }
 
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });

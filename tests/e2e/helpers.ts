@@ -162,6 +162,7 @@ export async function createMockListing(title: string, isQuickImpression: boolea
       question_text: 'What did you see on the screen? (Mock Question)',
       requires_recording: false,
       requires_image: false,
+      image_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
     });
 
   if (taskError) {

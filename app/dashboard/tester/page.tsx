@@ -133,6 +133,7 @@ export default function TesterDashboard() {
   const [profileGender, setProfileGender] = useState('')
   const [profileEmployment, setProfileEmployment] = useState('')
   const [profileTech, setProfileTech] = useState('')
+  const [accessibilityTags, setAccessibilityTags] = useState<string[]>([])
 
   const fetchProfileAndListings = useCallback(async () => {
     setLoading(true)
@@ -164,6 +165,7 @@ export default function TesterDashboard() {
       setProfileGender(profileData.gender || '')
       setProfileEmployment(profileData.employment_status || '')
       setProfileTech(profileData.tech_literacy || '')
+      setAccessibilityTags(profileData.accessibility_tags || [])
 
       // Fetch tester earnings dynamically (from completed payouts)
       const { data: payoutsData } = await supabase
@@ -217,15 +219,22 @@ export default function TesterDashboard() {
             target_gender: listing.target_gender,
             target_employment_status: listing.target_employment_status,
             target_tech_literacy: listing.target_tech_literacy,
+            target_accessibility_tags: listing.target_accessibility_tags,
           }
         })
 
-        // 3. Filter listings based on demographic match
+        // 3. Filter listings based on demographic match and accessibility match
         const filtered = mapped.filter((listing: any) => {
           if (listing.target_age_group && listing.target_age_group !== profileData.age_group) return false
           if (listing.target_gender && listing.target_gender !== profileData.gender) return false
           if (listing.target_employment_status && listing.target_employment_status !== profileData.employment_status) return false
           if (listing.target_tech_literacy && listing.target_tech_literacy !== profileData.tech_literacy) return false
+          
+          if (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0) {
+            const testerTags = profileData.accessibility_tags || []
+            const matchesAll = listing.target_accessibility_tags.every((tag: string) => testerTags.includes(tag))
+            if (!matchesAll) return false
+          }
           return true
         })
 
@@ -253,7 +262,8 @@ export default function TesterDashboard() {
           age_group: profileAge || null,
           gender: profileGender || null,
           employment_status: profileEmployment || null,
-          tech_literacy: profileTech || null
+          tech_literacy: profileTech || null,
+          accessibility_tags: accessibilityTags
         })
         .eq('id', profile.id)
 
@@ -809,6 +819,57 @@ export default function TesterDashboard() {
                   <option value="casual_user">Casual User</option>
                   <option value="student_dev">Developer / Technical</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Accessibility Accommodations</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={accessibilityTags.includes('screen_reader')}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setAccessibilityTags([...accessibilityTags, 'screen_reader']);
+                        } else {
+                          setAccessibilityTags(accessibilityTags.filter(t => t !== 'screen_reader'));
+                        }
+                      }}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    I use a Screen Reader
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={accessibilityTags.includes('keyboard_only')}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setAccessibilityTags([...accessibilityTags, 'keyboard_only']);
+                        } else {
+                          setAccessibilityTags(accessibilityTags.filter(t => t !== 'keyboard_only'));
+                        }
+                      }}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    I navigate using Keyboard-Only
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={accessibilityTags.includes('color_blind')}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setAccessibilityTags([...accessibilityTags, 'color_blind']);
+                        } else {
+                          setAccessibilityTags(accessibilityTags.filter(t => t !== 'color_blind'));
+                        }
+                      }}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    I have a Color Blindness profile
+                  </label>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">

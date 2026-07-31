@@ -118,6 +118,45 @@ describe('Validation Schemas (lib/validation/index.ts)', () => {
       };
       expect(createListingSchema.safeParse(durationTooLong).success).toBe(false);
     });
+
+    it('should validate variants under A/B comparative testing config', () => {
+      const correctVariants = {
+        ...validListingData,
+        variants: [
+          { id: 'A', title: 'Variant A', url: 'https://a.test.com', weight: 40 },
+          { id: 'B', title: 'Variant B', url: 'https://b.test.com', weight: 60 }
+        ]
+      };
+      expect(createListingSchema.safeParse(correctVariants).success).toBe(true);
+
+      const invalidSum = {
+        ...validListingData,
+        variants: [
+          { id: 'A', title: 'Variant A', url: 'https://a.test.com', weight: 50 },
+          { id: 'B', title: 'Variant B', url: 'https://b.test.com', weight: 40 }
+        ]
+      };
+      const result = createListingSchema.safeParse(invalidSum);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain('sum must be exactly 100');
+      }
+    });
+
+    it('should validate target accessibility tags and parent round linkage', () => {
+      const accessData = {
+        ...validListingData,
+        target_accessibility_tags: ['screen_reader', 'keyboard_only'],
+        parent_listing_id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
+      };
+      expect(createListingSchema.safeParse(accessData).success).toBe(true);
+
+      const invalidAccess = {
+        ...validListingData,
+        target_accessibility_tags: ['invalid_tag_value']
+      };
+      expect(createListingSchema.safeParse(invalidAccess).success).toBe(false);
+    });
   });
 
   describe('taskResponseSchema', () => {
@@ -157,6 +196,23 @@ describe('Validation Schemas (lib/validation/index.ts)', () => {
       const insecureUrl = { ...validTaskResponse, recording_url: 'http://insecure-domain.com/video.mp4' };
       const result = taskResponseSchema.safeParse(insecureUrl);
       expect(result.success).toBe(false);
+    });
+
+    it('should validate first click tracking metrics when present', () => {
+      const heatmapResponse = {
+        ...validTaskResponse,
+        first_click_x: 250,
+        first_click_y: 480,
+        first_click_time_ms: 1845
+      };
+      expect(taskResponseSchema.safeParse(heatmapResponse).success).toBe(true);
+
+      const invalidCoords = {
+        ...validTaskResponse,
+        first_click_x: -10,
+        first_click_y: 'not-a-number'
+      };
+      expect(taskResponseSchema.safeParse(invalidCoords).success).toBe(false);
     });
   });
 

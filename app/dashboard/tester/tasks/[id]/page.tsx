@@ -98,10 +98,75 @@ export default function TaskWorkspacePage() {
   // Countdown Timer state
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
+  // Post-Test Threading / Comments
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
   // Native media tracks refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  // Post-Test Debrief Threading
+  const fetchComments = useCallback(async (submissionId: string) => {
+    if (!submissionId) return;
+    try {
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .select(`
+          id,
+          comment_text,
+          created_at,
+          user_id,
+          profiles (
+            full_name,
+            role
+          )
+        `)
+        .eq('submission_id', submissionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setComments(data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch comments:', err);
+    }
+  }, [supabase]);
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentText.trim() || !submission) return;
+    setCommentsLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
+        alert('Authentication required.');
+        setCommentsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .insert({
+          submission_id: submission.id,
+          user_id: session.user.id,
+          comment_text: newCommentText.trim()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setNewCommentText('');
+      await fetchComments(submission.id);
+    } catch (err: any) {
+      alert('Failed to post comment: ' + err.message);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
 
   // 1. Basic Fingerprint generator
   const getFingerprint = () => {
@@ -224,6 +289,7 @@ export default function TaskWorkspacePage() {
             }
           } else if (submissionData.status === 'pending_review' || submissionData.status === 'approved' || submissionData.status === 'rejected') {
             setCurrentStep('submitted');
+            await fetchComments(submissionData.id);
           } else if (submissionData.status === 'expired') {
             setCurrentStep('expired');
           }
@@ -689,6 +755,9 @@ export default function TaskWorkspacePage() {
         throw new Error('Failed to update submission records: ' + subUpdateErr.message);
       }
       
+      if (finalStatus === 'pending_review') {
+        await fetchComments(submission.id);
+      }
       setCurrentStep(finalStatus === 'pending_review' ? 'submitted' : 'expired');
     } catch (err: any) {
       console.error('Submission failed:', err);
@@ -748,27 +817,99 @@ export default function TaskWorkspacePage() {
 
   if (currentStep === 'submitted' && listing) {
     return (
-      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
-        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-lg text-center shadow-md space-y-6">
-          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-            <CheckCircle className="w-8 h-8" />
+      <div className="min-h-screen bg-[#fcfcfc] py-12 px-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Success card (Left column, 1/3 width) */}
+          <div className="md:col-span-1 space-y-6">
+            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm text-center space-y-6 animate-fadeIn">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-gray-900">Submitted!</h2>
+                <p className="text-xs text-gray-500 mt-2 leading-relaxed font-medium">
+                  Your feedback is now pending review. The poster has up to{' '}
+                  <span className="font-bold text-gray-800">{listing.review_window_minutes} minutes</span> to review.
+                </p>
+                <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-2.5 py-1 inline-block mt-3">
+                  ₱{listing.rate_per_tester.toFixed(2)} in Escrow
+                </p>
+              </div>
+              <Link
+                href="/dashboard/tester"
+                className="block w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[8px] text-xs shadow-sm transition-all text-center"
+              >
+                Return to Dashboard
+              </Link>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-black text-gray-900">Test Submitted Successfully!</h2>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed font-medium">
-              Your feedback was compiled and is now pending review. The poster has up to{' '}
-              <span className="font-bold text-gray-800">{listing.review_window_minutes} minutes</span> to review.
-            </p>
-            <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-3 py-1.5 inline-block mt-4">
-              ₱{listing.rate_per_tester.toFixed(2)} is reserved in Escrow for your payout.
-            </p>
+
+          {/* Post-Test Debrief Thread (Right column, 2/3 width) */}
+          <div className="md:col-span-2 bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex flex-col h-[550px] animate-fadeIn">
+            <div className="border-b border-gray-100 pb-4 mb-4">
+              <h3 className="font-extrabold text-lg text-gray-900">Post-Test Debrief Thread</h3>
+              <p className="text-xs text-gray-500">Discuss task details, edge cases, and clarifications directly with the poster.</p>
+            </div>
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+              {comments.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-2">
+                  <p className="text-xs font-semibold">No debrief comments yet.</p>
+                  <p className="text-[11px] max-w-xs">Use this space to provide any extra notes or to answer the poster&apos;s clarification questions.</p>
+                </div>
+              ) : (
+                comments.map((comment) => {
+                  const isPoster = comment.profiles?.role === 'poster';
+                  return (
+                    <div
+                      key={comment.id}
+                      className={`flex flex-col max-w-[85%] rounded-[8px] p-3 text-xs leading-relaxed ${
+                        isPoster
+                          ? 'bg-blue-50 border border-blue-100 mr-auto text-blue-900'
+                          : 'bg-purple-50 border border-purple-100 ml-auto text-purple-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold mb-1">
+                        <span>{comment.profiles?.full_name || 'User'}</span>
+                        <span
+                          className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] font-extrabold ${
+                            isPoster ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {isPoster ? 'Poster' : 'Tester'}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap">{comment.comment_text}</p>
+                      <span className="text-[9px] text-gray-400 self-end mt-1.5 font-semibold">
+                        {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Comment Form */}
+            <form onSubmit={handlePostComment} className="border-t border-gray-100 pt-4 flex gap-2">
+              <input
+                type="text"
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                placeholder="Type your comment/notes here..."
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-[8px] text-xs focus:outline-none focus:border-blue-500 bg-white text-gray-800"
+                disabled={commentsLoading}
+                required
+              />
+              <button
+                type="submit"
+                disabled={commentsLoading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[8px] text-xs disabled:opacity-50 transition-all"
+              >
+                {commentsLoading ? 'Sending...' : 'Send'}
+              </button>
+            </form>
           </div>
-          <Link
-            href="/dashboard/tester"
-            className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-sm shadow-sm transition-all text-center"
-          >
-            Return to Tester Dashboard
-          </Link>
         </div>
       </div>
     );
@@ -855,6 +996,36 @@ export default function TaskWorkspacePage() {
                   {listing.description}
                 </p>
               </div>
+
+              {/* A/B Testing Variant URL box */}
+              {listing.variants && Array.isArray(listing.variants) && listing.variants.length > 0 && submission && submission.assigned_variant_id && (
+                <div className="bg-purple-50 border border-purple-200 rounded-[8px] p-5 select-none animate-fadeIn">
+                  <h3 className="font-bold text-sm text-purple-800 mb-1">Assigned Variant for Testing:</h3>
+                  {(() => {
+                    const variant = listing.variants.find((v: any) => v.id === submission.assigned_variant_id);
+                    if (variant) {
+                      return (
+                        <div>
+                          <p className="text-sm text-purple-900 font-bold mb-2">
+                            {variant.title}
+                          </p>
+                          <p className="text-xs text-gray-500 mb-1">Please test this specific URL for this task round:</p>
+                          <a
+                            href={variant.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-800 underline break-all"
+                            id="tester-variant-link"
+                          >
+                            {variant.url}
+                          </a>
+                        </div>
+                      );
+                    }
+                    return <p className="text-sm text-purple-700">Loading variant URL...</p>;
+                  })()}
+                </div>
+              )}
 
               {/* Task Checklist form */}
               <form onSubmit={handleSubmit} className="space-y-6">

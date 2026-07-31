@@ -134,6 +134,11 @@ export default function SubmissionReviewPage({ params }: PageProps) {
   // Lightbox for full screenshot preview
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
+  // Post-Test Debrief Threading / Comments
+  const [comments, setComments] = useState<any[]>([])
+  const [newCommentText, setNewCommentText] = useState('')
+  const [commentsLoading, setCommentsLoading] = useState(false)
+
   // Initial Data Fetching
   useEffect(() => {
     const fetchData = async () => {
@@ -213,6 +218,26 @@ export default function SubmissionReviewPage({ params }: PageProps) {
           setPayout(payoutData)
         }
 
+        // 6. Fetch debrief comments
+        const { data: commData, error: commError } = await supabase
+          .from('submission_comments')
+          .select(`
+            id,
+            comment_text,
+            created_at,
+            user_id,
+            profiles (
+              full_name,
+              role
+            )
+          `)
+          .eq('submission_id', submissionId)
+          .order('created_at', { ascending: true })
+
+        if (!commError && commData) {
+          setComments(commData)
+        }
+
       } catch (err: any) {
         console.error('Error fetching review data:', err)
         setError(err.message || 'An unexpected error occurred while loading files.')
@@ -223,6 +248,64 @@ export default function SubmissionReviewPage({ params }: PageProps) {
 
     fetchData()
   }, [submissionId, id, supabase])
+
+  const fetchComments = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .select(`
+          id,
+          comment_text,
+          created_at,
+          user_id,
+          profiles (
+            full_name,
+            role
+          )
+        `)
+        .eq('submission_id', submissionId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setComments(data || [])
+    } catch (err: any) {
+      console.error('Failed to fetch comments:', err)
+    }
+  }, [submissionId, supabase])
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCommentText.trim()) return
+    setCommentsLoading(true)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session || !session.user) {
+        alert('Authentication required.')
+        setCommentsLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .insert({
+          submission_id: submissionId,
+          user_id: session.user.id,
+          comment_text: newCommentText.trim()
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setNewCommentText('')
+      await fetchComments()
+    } catch (err: any) {
+      alert('Failed to post comment: ' + err.message)
+    } finally {
+      setCommentsLoading(false)
+    }
+  }
 
   // Resolve private storage URLs to secure signed URLs on load
   useEffect(() => {
@@ -585,6 +668,19 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                     </span>
                   )}
                 </div>
+                {listing.variants && Array.isArray(listing.variants) && listing.variants.length > 0 && submission.assigned_variant_id && (
+                  <div>
+                    <span className="text-xs text-gray-400 block font-semibold uppercase tracking-wider">A/B Testing Variant</span>
+                    {(() => {
+                      const variant = listing.variants.find((v: any) => v.id === submission.assigned_variant_id);
+                      return (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-[6px] border border-purple-100 font-semibold mt-1">
+                          {variant ? variant.title : submission.assigned_variant_id}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -757,6 +853,82 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                 </div>
               ))
             )}
+          </div>
+
+          {/* Post-Test Debrief Thread */}
+          <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex flex-col h-[500px] mt-8 animate-fadeIn">
+            <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-lg text-gray-900">Post-Test Debrief Thread</h3>
+                <p className="text-xs text-gray-500">Communicate directly with the tester to ask clarification questions about their testing round.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchComments()}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+              {comments.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-2">
+                  <p className="text-xs font-semibold">No comments in this thread yet.</p>
+                  <p className="text-[11px] max-w-xs">Ask the tester to clarify how they encountered a bug, or give them tips on what screenshot you needed.</p>
+                </div>
+              ) : (
+                comments.map((comment) => {
+                  const isPosterRole = comment.profiles?.role === 'poster';
+                  return (
+                    <div
+                      key={comment.id}
+                      className={`flex flex-col max-w-[85%] rounded-[8px] p-3 text-xs leading-relaxed ${
+                        isPosterRole
+                          ? 'bg-blue-50 border border-blue-100 ml-auto text-blue-900'
+                          : 'bg-purple-50 border border-purple-100 mr-auto text-purple-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold mb-1">
+                        <span>{comment.profiles?.full_name || 'User'}</span>
+                        <span
+                          className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] font-extrabold ${
+                            isPosterRole ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {isPosterRole ? 'Poster' : 'Tester'}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap">{comment.comment_text}</p>
+                      <span className="text-[9px] text-gray-400 self-end mt-1.5 font-semibold">
+                        {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Comment Form */}
+            <form onSubmit={handlePostComment} className="border-t border-gray-100 pt-4 flex gap-2">
+              <input
+                type="text"
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                placeholder="Type your comment/question here..."
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-[8px] text-xs focus:outline-none focus:border-blue-500 bg-white text-gray-800"
+                disabled={commentsLoading}
+                required
+              />
+              <button
+                type="submit"
+                disabled={commentsLoading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[8px] text-xs disabled:opacity-50 transition-all"
+              >
+                {commentsLoading ? 'Sending...' : 'Send'}
+              </button>
+            </form>
           </div>
         </div>
 

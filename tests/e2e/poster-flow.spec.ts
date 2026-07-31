@@ -36,8 +36,16 @@ test.describe('Poster Flow E2E', () => {
     // Fill slots
     await page.fill('label:has-text("Slots Count") + input[type="number"]', '5');
 
-    // Check "5-Second Quick Impression Test"
-    await page.check('input[type="checkbox"]');
+    // Check "5-Second Quick Impression Test" (first checkbox in form)
+    await page.locator('input[type="checkbox"]').first().check();
+
+    // Enable A/B Comparative Testing (second checkbox in form) and fill variant URLs
+    await page.locator('input[type="checkbox"]').nth(1).check();
+    await page.locator('input[type="url"]').first().fill('https://variant-a.example.com');
+    await page.locator('input[type="url"]').last().fill('https://variant-b.example.com');
+
+    // Add accessibility requirements (fourth checkbox in form)
+    await page.locator('input[type="checkbox"]').nth(3).check();
 
     // Select Demographic filters: Tech Literacy and Age Group
     // Age Group: 25-34 years old

@@ -39,8 +39,18 @@ export const createListingSchema = z.object({
   target_gender: z.string().optional(),
   target_employment_status: z.string().optional(),
   target_tech_literacy: z.string().optional(),
+  target_accessibility_tags: z.array(z.enum(['screen_reader', 'keyboard_only', 'color_blind'])).optional(),
   is_quick_impression: z.boolean().default(false),
   impression_duration_seconds: z.number().int().min(5).max(30).default(5).optional(),
+  parent_listing_id: z.string().uuid().nullable().optional(),
+  variants: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string().min(1, { message: 'Variant name is required.' }),
+      url: z.string().url({ message: 'Must be a valid variant URL.' }),
+      weight: z.number().int().min(0).max(100).default(50),
+    })
+  ).optional(),
   
   questions: z.array(
     z.object({
@@ -57,6 +67,16 @@ export const createListingSchema = z.object({
 .refine((data) => data.total_budget === data.rate_per_tester * data.slots_count, {
   message: 'Escrow verification failed: Total budget does not equal rate multiplied by slots.',
   path: ['total_budget'],
+})
+.refine((data) => {
+  if (data.variants && data.variants.length > 0) {
+    const sum = data.variants.reduce((acc, v) => acc + v.weight, 0);
+    return sum === 100;
+  }
+  return true;
+}, {
+  message: 'Variant weight sum must be exactly 100',
+  path: ['variants'],
 });
 
 export type CreateListingInput = z.infer<typeof createListingSchema>;
@@ -94,6 +114,11 @@ export const taskResponseSchema = z.object({
   
   recording_url: secureUrlSchema.nullable().optional(),
   image_url: secureUrlSchema.nullable().optional(),
+  first_click_x: z.number().int().nullable().optional(),
+  first_click_y: z.number().int().nullable().optional(),
+  first_click_time_ms: z.number().int().nullable().optional(),
+  first_click_screen_width: z.number().int().nullable().optional(),
+  first_click_screen_height: z.number().int().nullable().optional(),
 });
 
 export type TaskResponseInput = z.infer<typeof taskResponseSchema>;

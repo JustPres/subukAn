@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
@@ -14,7 +14,8 @@ import {
   Eye,
   Lock,
   Loader2,
-  Info
+  Info,
+  Send
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { AgreementModal } from '@/components/shared/AgreementModal'
@@ -51,6 +52,9 @@ interface TaskResponseState {
   answer_text: string;
   completed_successfully: boolean;
   difficulty_rating: number;
+  first_click_x?: number | null;
+  first_click_y?: number | null;
+  first_click_time_ms?: number | null;
 }
 
 const NDA_CONTENT = `subukAn Tester Agreement & NDA - Five-Second Test
@@ -90,6 +94,7 @@ export default function FiveSecondTestWorkspace() {
   const [targetImageUrl, setTargetImageUrl] = useState('');
   const [imageLoaded, setImageLoaded] = useState(false);
   const [viewTimeLeft, setViewTimeLeft] = useState(5);
+  const [viewStartTimestamp, setViewStartTimestamp] = useState<number | null>(null);
 
   // Questionnaire States
   const [taskResponses, setTaskResponses] = useState<Record<string, TaskResponseState>>({});
@@ -98,6 +103,70 @@ export default function FiveSecondTestWorkspace() {
 
   // Overall workspace listing time limit countdown
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  // Post-Test Threading / Comments
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  const fetchComments = useCallback(async (submissionId: string) => {
+    if (!submissionId) return;
+    try {
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .select(`
+          id,
+          comment_text,
+          created_at,
+          user_id,
+          profiles (
+            full_name,
+            role
+          )
+        `)
+        .eq('submission_id', submissionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setComments(data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch comments:', err);
+    }
+  }, [supabase]);
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentText.trim() || !submission) return;
+    setCommentsLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
+        alert('Authentication required.');
+        setCommentsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .insert({
+          submission_id: submission.id,
+          user_id: session.user.id,
+          comment_text: newCommentText.trim()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setNewCommentText('');
+      await fetchComments(submission.id);
+    } catch (err: any) {
+      alert('Failed to post comment: ' + err.message);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
 
   // Basic Fingerprint generator
   const getFingerprint = () => {
@@ -237,6 +306,7 @@ export default function FiveSecondTestWorkspace() {
           if (submissionData.status === 'in_progress') {
             setCurrentStep('cover');
           } else if (['pending_review', 'approved', 'rejected'].includes(submissionData.status)) {
+            await fetchComments(submissionData.id);
             setCurrentStep('submitted');
           } else if (submissionData.status === 'expired') {
             setCurrentStep('expired');
@@ -376,6 +446,17 @@ export default function FiveSecondTestWorkspace() {
     return () => clearTimeout(timer);
   }, [currentStep, viewTimeLeft]);
 
+  // Poll comments for debrief thread
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (submission && currentStep === 'submitted') {
+        fetchComments(submission.id);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [submission, currentStep, fetchComments]);
+
   // NDA modal handlers
   const handleAcceptAgreement = () => {
     setCurrentStep('cover');
@@ -427,6 +508,35 @@ export default function FiveSecondTestWorkspace() {
           difficulty_rating: 3
         }),
         difficulty_rating: val
+      }
+    }));
+  };
+
+  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    const timedTask = tasks.find(t => t.type === 'timed_impression' || t.timed_display_seconds || t.image_url || t.screenshot_url) || tasks[0];
+    if (!timedTask) return;
+
+    const currentResp = taskResponses[timedTask.id];
+    if (currentResp && (currentResp.first_click_x !== undefined && currentResp.first_click_x !== null)) {
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    const clickTimeMs = viewStartTimestamp ? Date.now() - viewStartTimestamp : 0;
+
+    setTaskResponses(prev => ({
+      ...prev,
+      [timedTask.id]: {
+        ...(prev[timedTask.id] || {
+          answer_text: '',
+          completed_successfully: false,
+          difficulty_rating: 3
+        }),
+        first_click_x: x,
+        first_click_y: y,
+        first_click_time_ms: clickTimeMs
       }
     }));
   };
@@ -492,7 +602,10 @@ export default function FiveSecondTestWorkspace() {
           time_on_task_seconds: Math.max(1, Math.min(7200, questionnaireTime)),
           difficulty_rating: resp?.difficulty_rating || 3,
           recording_url: null,
-          image_url: null
+          image_url: null,
+          first_click_x: resp?.first_click_x ?? null,
+          first_click_y: resp?.first_click_y ?? null,
+          first_click_time_ms: resp?.first_click_time_ms ?? null,
         };
       });
 
@@ -524,6 +637,9 @@ export default function FiveSecondTestWorkspace() {
         throw new Error('Failed to update submission records: ' + subUpdateErr.message);
       }
 
+      if (finalStatus === 'pending_review') {
+        await fetchComments(submission.id);
+      }
       setCurrentStep(finalStatus === 'pending_review' ? 'submitted' : 'expired');
     } catch (err: any) {
       console.error('Submission failed:', err);
@@ -583,27 +699,105 @@ export default function FiveSecondTestWorkspace() {
 
   if (currentStep === 'submitted' && listing) {
     return (
-      <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center p-6">
-        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-lg text-center shadow-md space-y-6">
-          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-            <CheckCircle className="w-8 h-8" />
+      <div className="min-h-screen bg-[#fcfcfc] py-12 px-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Success card (Left column, 1/3 width) */}
+          <div className="md:col-span-1 space-y-6">
+            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm text-center space-y-6 animate-fadeIn">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-gray-900">Submitted!</h2>
+                <p className="text-xs text-gray-500 mt-2 leading-relaxed font-medium">
+                  Your feedback is now pending review. The poster has up to{' '}
+                  <span className="font-bold text-gray-800">{listing.review_window_minutes} minutes</span> to review.
+                </p>
+                <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-2.5 py-1 inline-block mt-3">
+                  ₱{listing.rate_per_tester.toFixed(2)} in Escrow
+                </p>
+              </div>
+              <Link
+                href="/dashboard/tester"
+                className="block w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[8px] text-xs shadow-sm transition-all text-center"
+              >
+                Return to Dashboard
+              </Link>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-black text-gray-900">Test Submitted Successfully!</h2>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed font-medium">
-              Your impression feedback has been compiled and is now pending review. The poster has up to{' '}
-              <span className="font-bold text-gray-800">{listing.review_window_minutes} minutes</span> to review.
-            </p>
-            <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-3 py-1.5 inline-block mt-4">
-              ₱{listing.rate_per_tester.toFixed(2)} is reserved in Escrow for your payout.
-            </p>
+
+          {/* Post-Test Debrief Thread (Right column, 2/3 width) */}
+          <div className="md:col-span-2 bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex flex-col h-[550px] animate-fadeIn">
+            <div className="border-b border-gray-100 pb-4 mb-4">
+              <h3 className="font-extrabold text-lg text-gray-900">Post-Test Debrief Thread</h3>
+              <p className="text-xs text-gray-500">Discuss task details, edge cases, and clarifications directly with the poster.</p>
+            </div>
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+              {comments.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-2">
+                  <p className="text-xs font-semibold">No debrief comments yet.</p>
+                  <p className="text-[11px] max-w-xs">Use this space to provide any extra notes or to answer the poster&apos;s clarification questions.</p>
+                </div>
+              ) : (
+                comments.map((comment) => {
+                  const isPoster = comment.profiles?.role === 'poster';
+                  return (
+                    <div
+                      key={comment.id}
+                      className={`flex flex-col max-w-[85%] rounded-[8px] p-3 text-xs leading-relaxed ${
+                        isPoster
+                          ? 'bg-blue-50 border border-blue-100 mr-auto text-blue-900'
+                          : 'bg-purple-50 border border-purple-100 ml-auto text-purple-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold mb-1">
+                        <span>{comment.profiles?.full_name || 'User'}</span>
+                        <span
+                          className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] font-extrabold ${
+                            isPoster ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {isPoster ? 'Poster' : 'Tester'}
+                        </span>
+                      </div>
+                      <p className="text-gray-800 whitespace-pre-wrap">{comment.comment_text}</p>
+                      <span className="text-[9px] text-gray-400 mt-1 block text-right font-medium">
+                        {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Comment Form */}
+            <form onSubmit={handlePostComment} className="flex gap-2 border-t border-gray-100 pt-3">
+              <input
+                type="text"
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                placeholder="Type your comment/notes here..."
+                disabled={commentsLoading}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-[8px] text-xs focus:outline-none focus:border-blue-500 disabled:bg-gray-50"
+              />
+              <button
+                type="submit"
+                disabled={commentsLoading || !newCommentText.trim()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-50"
+              >
+                {commentsLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-3 h-3" />
+                    Send
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-          <Link
-            href="/dashboard/tester"
-            className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-sm shadow-sm transition-all text-center"
-          >
-            Return to Tester Dashboard
-          </Link>
         </div>
       </div>
     );
@@ -698,6 +892,40 @@ export default function FiveSecondTestWorkspace() {
                 </div>
               </div>
 
+              {/* A/B Testing Variant box */}
+              {listing.variants && Array.isArray(listing.variants) && listing.variants.length > 0 && submission && submission.assigned_variant_id && (
+                <div className="bg-purple-50 border border-purple-200 rounded-[8px] p-5 select-none animate-fadeIn">
+                  <h3 className="font-bold text-sm text-purple-800 mb-1">Assigned Variant for Testing:</h3>
+                  {(() => {
+                    const variant = listing.variants.find((v: any) => v.id === submission.assigned_variant_id);
+                    if (variant) {
+                      return (
+                        <div>
+                          <p className="text-sm text-purple-900 font-bold mb-2">
+                            {variant.title}
+                          </p>
+                          {variant.url && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Variant URL (for reference):</p>
+                              <a
+                                href={variant.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800 underline break-all"
+                                id="tester-variant-link"
+                              >
+                                {variant.url}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return <p className="text-sm text-purple-700">Loading variant URL...</p>;
+                  })()}
+                </div>
+              )}
+
               <div className="border border-blue-100 bg-blue-50/50 rounded-xl p-5 flex items-start gap-3">
                 <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
@@ -727,6 +955,7 @@ export default function FiveSecondTestWorkspace() {
                   onClick={() => {
                     setViewTimeLeft(timedDisplaySeconds);
                     setCurrentStep('viewing');
+                    setViewStartTimestamp(Date.now());
                   }}
                   className="px-6 py-3 font-extrabold text-sm rounded-[8px] text-white bg-blue-600 hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                 >
@@ -774,9 +1003,10 @@ export default function FiveSecondTestWorkspace() {
             <img
               src={targetImageUrl}
               alt="Design screenshot under review"
-              className="max-w-full max-h-[75vh] object-contain shadow-2xl border border-white/10 rounded-[8px] select-none pointer-events-none"
+              className="max-w-full max-h-[75vh] object-contain shadow-2xl border border-white/10 rounded-[8px] select-none cursor-crosshair"
               draggable={false}
               onContextMenu={(e) => e.preventDefault()}
+              onClick={handleImageClick}
             />
           ) : (
             <div className="w-full h-80 max-w-2xl bg-gray-800 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-2 border border-dashed border-gray-700">

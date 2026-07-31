@@ -16,7 +16,7 @@ export function AgreementModal({ title, content, onAccept, onDecline }: Agreemen
   const handleScroll = () => {
     if (contentRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = contentRef.current
-      if (Math.abs(scrollHeight - clientHeight - scrollTop) < 1) {
+      if (scrollHeight - clientHeight - scrollTop <= 3) {
         setIsScrolledToBottom(true)
       }
     }

@@ -60,6 +60,15 @@ export default function PosterDashboard() {
   const [targetGender, setTargetGender] = useState('')
   const [targetEmploymentStatus, setTargetEmploymentStatus] = useState('')
   const [targetTechLiteracy, setTargetTechLiteracy] = useState('')
+  const [targetAccessibilityTags, setTargetAccessibilityTags] = useState<string[]>([])
+
+  // A/B Testing & Iterations
+  const [isABTesting, setIsABTesting] = useState(false)
+  const [formVariants, setFormVariants] = useState<Array<{ id: string; title: string; url: string; weight: number }>>([
+    { id: 'A', title: 'Variant A', url: '', weight: 50 },
+    { id: 'B', title: 'Variant B', url: '', weight: 50 }
+  ])
+  const [parentListingId, setParentListingId] = useState('')
 
   // Quick impression state
   const [isQuickImpression, setIsQuickImpression] = useState(false)
@@ -166,8 +175,11 @@ export default function PosterDashboard() {
       target_gender: targetGender || undefined,
       target_employment_status: targetEmploymentStatus || undefined,
       target_tech_literacy: targetTechLiteracy || undefined,
+      target_accessibility_tags: targetAccessibilityTags.length > 0 ? targetAccessibilityTags : undefined,
       is_quick_impression: isQuickImpression,
       impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : undefined,
+      parent_listing_id: parentListingId || undefined,
+      variants: isABTesting ? formVariants : undefined,
     }
 
     const validation = createListingSchema.safeParse(inputData)
@@ -201,8 +213,11 @@ export default function PosterDashboard() {
           target_gender: targetGender || null,
           target_employment_status: targetEmploymentStatus || null,
           target_tech_literacy: targetTechLiteracy || null,
+          target_accessibility_tags: targetAccessibilityTags,
           is_quick_impression: isQuickImpression,
           impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : null,
+          parent_listing_id: parentListingId || null,
+          variants: isABTesting ? formVariants : [],
         })
         .select()
         .single()
@@ -245,6 +260,13 @@ export default function PosterDashboard() {
       setTargetGender('')
       setTargetEmploymentStatus('')
       setTargetTechLiteracy('')
+      setTargetAccessibilityTags([])
+      setIsABTesting(false)
+      setFormVariants([
+        { id: 'A', title: 'Variant A', url: '', weight: 50 },
+        { id: 'B', title: 'Variant B', url: '', weight: 50 }
+      ])
+      setParentListingId('')
       setIsQuickImpression(false)
       setImpressionDurationSeconds(5)
 
@@ -421,7 +443,11 @@ export default function PosterDashboard() {
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {listings.map(listing => (
                     <tr key={listing.id} className="hover:bg-gray-50/55 transition-colors">
-                      <td className="p-4 font-bold text-gray-900">{listing.title}</td>
+                      <td className="p-4 font-bold text-gray-900">
+                        <Link href={`/dashboard/poster/listings/${listing.id}`} className="hover:text-blue-600 hover:underline">
+                          {listing.title}
+                        </Link>
+                      </td>
                       <td className="p-4 text-gray-600">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-gray-400" />
@@ -702,6 +728,130 @@ export default function PosterDashboard() {
                       </p>
                     </div>
                   )}
+                </div>
+
+                {/* A/B Testing Section */}
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-bold text-gray-800 block">Enable A/B Comparative Testing</label>
+                      <span className="text-xs text-gray-400">Route testers randomly between two variants of your web app.</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isABTesting}
+                      onChange={e => setIsABTesting(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5 cursor-pointer"
+                    />
+                  </div>
+
+                  {isABTesting && (
+                    <div className="p-4 bg-purple-50 border border-purple-100 rounded-[8px] space-y-4">
+                      {formVariants.map((v, idx) => (
+                        <div key={v.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-0.5">Variant Label</label>
+                            <input
+                              type="text"
+                              value={v.title}
+                              onChange={e => {
+                                const updated = [...formVariants];
+                                updated[idx].title = e.target.value;
+                                setFormVariants(updated);
+                              }}
+                              className="w-full p-2 border border-gray-200 rounded-[8px] text-xs bg-white focus:outline-none"
+                              required
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-[11px] font-bold text-gray-600 mb-0.5">App URL</label>
+                            <input
+                              type="url"
+                              value={v.url}
+                              onChange={e => {
+                                const updated = [...formVariants];
+                                updated[idx].url = e.target.value;
+                                setFormVariants(updated);
+                              }}
+                              placeholder="https://..."
+                              className="w-full p-2 border border-gray-200 rounded-[8px] text-xs bg-white focus:outline-none"
+                              required={isABTesting}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Accessibility Requirements */}
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <label className="text-sm font-bold text-gray-800 block">Accessibility Requirements (Optional)</label>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetAccessibilityTags.includes('screen_reader')}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setTargetAccessibilityTags([...targetAccessibilityTags, 'screen_reader']);
+                          } else {
+                            setTargetAccessibilityTags(targetAccessibilityTags.filter(t => t !== 'screen_reader'));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      Requires Screen Reader
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetAccessibilityTags.includes('keyboard_only')}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setTargetAccessibilityTags([...targetAccessibilityTags, 'keyboard_only']);
+                          } else {
+                            setTargetAccessibilityTags(targetAccessibilityTags.filter(t => t !== 'keyboard_only'));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      Requires Keyboard-Only Nav
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetAccessibilityTags.includes('color_blind')}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setTargetAccessibilityTags([...targetAccessibilityTags, 'color_blind']);
+                          } else {
+                            setTargetAccessibilityTags(targetAccessibilityTags.filter(t => t !== 'color_blind'));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      Requires Color Blindness Profile
+                    </label>
+                  </div>
+                </div>
+
+                {/* Iteration Linkage (Benchmarking) */}
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-gray-800 block">Link to Previous Round (Benchmarking)</label>
+                    <span className="text-xs text-gray-400">Track usability score and task completion trends over multiple versions of your app.</span>
+                  </div>
+                  <select
+                    value={parentListingId}
+                    onChange={e => setParentListingId(e.target.value)}
+                    className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none"
+                  >
+                    <option value="">No parent / First round</option>
+                    {listings.map(l => (
+                      <option key={l.id} value={l.id}>{l.title} ({formatDate(l.created_at)})</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Testing Questions Section */}
