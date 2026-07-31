@@ -7,3 +7,4 @@
 [2026-07-30 20:32:00] Build/Lint/Test Successful - Replaced static sA logo badge with custom subukanlogoweb.png image in header/footer, set tab icon metadata to subukantabico.ico, created public directory, and fixed AVAILABLE_JOBS mock listing types.
 [2026-07-31 11:03:00] Build/Lint/Test Successful - Configured local in-memory Mock Supabase API routing during Playwright E2E tests, increased browser E2E test timeout to 60s to prevent cold-start timeouts.
 [2026-07-31 12:17:00] Build/Lint/Test Successful - Fully integrated A/B comparative testing, accessibility specialty tester profiling & routing, timed impression first-click heatmap coordinate overlay painting, post-test threaded debrief chats, and parent iteration benchmarks, with complete E2E and unit test coverage.
+[2026-07-31 12:31:00] Build/Lint/Test Successful - Added Email and Password credential input fields to the Login screen for local E2E and pilot testing.
