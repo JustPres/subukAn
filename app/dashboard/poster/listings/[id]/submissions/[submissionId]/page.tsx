@@ -22,6 +22,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 // Interfaces mapping to Supabase Tables schema
 interface Profile {
@@ -140,6 +141,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
   const [comments, setComments] = useState<any[]>([])
   const [newCommentText, setNewCommentText] = useState('')
   const [commentsLoading, setCommentsLoading] = useState(false)
+  const [commentError, setCommentError] = useState<string | null>(null)
 
   // Initial Data Fetching
   useEffect(() => {
@@ -277,13 +279,14 @@ export default function SubmissionReviewPage({ params }: PageProps) {
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault()
+    setCommentError(null)
     if (!newCommentText.trim()) return
     setCommentsLoading(true)
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session || !session.user) {
-        alert('Authentication required.')
+        setCommentError('Authentication required. Please log in again.')
         setCommentsLoading(false)
         return
       }
@@ -302,8 +305,8 @@ export default function SubmissionReviewPage({ params }: PageProps) {
 
       setNewCommentText('')
       await fetchComments()
-    } catch (err: any) {
-      alert('Failed to post comment: ' + err.message)
+    } catch (err: unknown) {
+      setCommentError(sanitizeDatabaseError(err, 'Failed to post comment. Please try again.'))
     } finally {
       setCommentsLoading(false)
     }
@@ -913,6 +916,12 @@ export default function SubmissionReviewPage({ params }: PageProps) {
             </div>
 
             {/* Comment Form */}
+            {commentError && (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px] mb-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{commentError}</span>
+              </div>
+            )}
             <form onSubmit={handlePostComment} className="border-t border-gray-100 pt-4 flex gap-2">
               <input
                 type="text"

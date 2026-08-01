@@ -110,6 +110,7 @@ export default function FiveSecondTestWorkspace() {
   const [comments, setComments] = useState<any[]>([]);
   const [newCommentText, setNewCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const fetchComments = useCallback(async (submissionId: string) => {
     if (!submissionId) return;
@@ -138,13 +139,14 @@ export default function FiveSecondTestWorkspace() {
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCommentError(null);
     if (!newCommentText.trim() || !submission) return;
     setCommentsLoading(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || !session.user) {
-        alert('Authentication required.');
+        setCommentError('Authentication required. Please log in again.');
         setCommentsLoading(false);
         return;
       }
@@ -163,8 +165,8 @@ export default function FiveSecondTestWorkspace() {
 
       setNewCommentText('');
       await fetchComments(submission.id);
-    } catch (err: any) {
-      alert('Failed to post comment: ' + err.message);
+    } catch (err: unknown) {
+      setCommentError(sanitizeDatabaseError(err, 'Failed to post comment. Please try again.'));
     } finally {
       setCommentsLoading(false);
     }
@@ -775,6 +777,12 @@ export default function FiveSecondTestWorkspace() {
             </div>
 
             {/* Comment Form */}
+            {commentError && (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px] mb-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{commentError}</span>
+              </div>
+            )}
             <form onSubmit={handlePostComment} className="flex gap-2 border-t border-gray-100 pt-3">
               <input
                 type="text"
