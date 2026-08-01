@@ -14,3 +14,4 @@
 [2026-08-01 13:32:00] Build/Lint/Test Successful - Implemented server-side middleware auto-redirects for returning users with active database profile roles, and updated sidebar Switch Role targets to bypass auto-redirects.
 [2026-08-01 13:37:00] Build/Lint/Test Successful - Replaced profiles upsert query with safe update/insert fallback to satisfy NOT NULL schema constraints and prevent dead role clicks.
 [2026-08-01 13:56:00] Build/Lint/Test Successful - Fixed silent profile role updates by querying existence first, added PATCH support to mock-supabase profiles API, and resolved E2E test locator collision.
+[2026-08-01 14:08:00] Build/Lint/Test Successful - Fixed PostgreSQL RLS infinite recursion loop on submissions table using SECURITY DEFINER utility function.
