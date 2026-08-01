@@ -321,7 +321,7 @@ export default function TesterDashboard() {
 
       if (error) {
         if (error.message?.includes('profiles') || error.message?.includes('schema cache')) {
-          setProfile(prev => prev ? {
+          setProfile((prev: any) => prev ? {
             ...prev,
             age_group: profileAge,
             gender: profileGender,

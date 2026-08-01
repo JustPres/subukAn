@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
@@ -20,6 +20,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
+import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 interface Listing {
   id: string;
@@ -31,6 +32,7 @@ interface Listing {
   total_budget: number;
   review_window_minutes: number;
   status: string;
+  variants?: any[];
 }
 
 interface Task {
@@ -273,7 +275,7 @@ export default function TaskWorkspacePage() {
           .maybeSingle();
            
         if (subErr) {
-          setError('Failed to query submission status.');
+          setError(sanitizeDatabaseError(subErr, 'Failed to query submission status.'));
           setCurrentStep('error');
           setLoading(false);
           return;
@@ -302,7 +304,7 @@ export default function TaskWorkspacePage() {
             .neq('status', 'expired');
              
           if (countErr) {
-            setError('Failed to verify slot availability.');
+            setError(sanitizeDatabaseError(countErr, 'Failed to verify slot availability.'));
             setCurrentStep('error');
             setLoading(false);
             return;
@@ -328,7 +330,7 @@ export default function TaskWorkspacePage() {
             .single();
              
           if (claimErr || !newSubmission) {
-            setError('Failed to claim slot: ' + (claimErr?.message || 'Unknown error'));
+            setError(sanitizeDatabaseError(claimErr, 'Failed to claim slot. Please try again.'));
             setCurrentStep('error');
             setLoading(false);
             return;
@@ -342,7 +344,7 @@ export default function TaskWorkspacePage() {
         }
       } catch (err: any) {
         console.error('Initialization error:', err);
-        setError(err.message || 'An unexpected error occurred during page load.');
+        setError(sanitizeDatabaseError(err, 'An unexpected error occurred during page load.'));
         setCurrentStep('error');
       } finally {
         setLoading(false);

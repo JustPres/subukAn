@@ -38,6 +38,15 @@ export function sanitizeDatabaseError(error: unknown, fallbackMessage: string = 
     lowercaseMsg.includes('postgres') ||
     lowercaseMsg.includes('database');
 
+  // Check for specific duplicate submission constraints to give a user-friendly message
+  if (lowercaseMsg.includes('submissions_listing_id_tester_id_key') || (lowercaseMsg.includes('duplicate key') && lowercaseMsg.includes('submissions'))) {
+    return 'You have already claimed a slot for this listing. Please check your active tasks.';
+  }
+
+  if (lowercaseMsg.includes('row level security') || lowercaseMsg.includes('rls') || lowercaseMsg.includes('permission denied')) {
+    return 'Access denied. You do not have permission to perform this action.';
+  }
+
   if (isSensitive) {
     return fallbackMessage;
   }

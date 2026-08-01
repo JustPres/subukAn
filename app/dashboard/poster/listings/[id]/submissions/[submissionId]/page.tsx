@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -43,6 +43,7 @@ interface Listing {
   review_window_minutes: number;
   status: string;
   poster_id: string;
+  variants?: any[];
 }
 
 interface Submission {
@@ -56,6 +57,7 @@ interface Submission {
   review_completed_at: string | null;
   rejection_reason: 'instructions_not_followed' | 'recording_mismatch' | 'incomplete' | 'low_effort' | null;
   rejection_explanation: string | null;
+  assigned_variant_id?: string | null;
 }
 
 interface Task {

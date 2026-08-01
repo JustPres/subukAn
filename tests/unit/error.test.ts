@@ -30,10 +30,7 @@ describe('sanitizeDatabaseError', () => {
       new Error('column "gender" does not exist'),
       new Error('syntax error at or near "SELECT"'),
       new Error('insert violates foreign key constraint'),
-      new Error('duplicate key value violates unique constraint'),
       new Error('violates check constraint "age_check"'),
-      new Error('violates row level security policy for profiles'),
-      new Error('infinite recursion detected in RLS policy'),
       new Error('PGRST116: no rows returned'),
       new Error('Postgres error code 42P01'),
       'raw database failure text here',
@@ -42,6 +39,14 @@ describe('sanitizeDatabaseError', () => {
     sensitiveErrors.forEach((err) => {
       expect(sanitizeDatabaseError(err)).toBe(fallback);
     });
+  });
+
+  it('should return specific user-friendly messages for known constraints', () => {
+    expect(sanitizeDatabaseError(new Error('duplicate key value violates unique constraint "submissions_listing_id_tester_id_key"')))
+      .toBe('You have already claimed a slot for this listing. Please check your active tasks.');
+
+    expect(sanitizeDatabaseError(new Error('violates row level security policy for profiles')))
+      .toBe('Access denied. You do not have permission to perform this action.');
   });
 
   it('should handle custom objects with a message property', () => {

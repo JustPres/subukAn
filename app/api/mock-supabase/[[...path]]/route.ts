@@ -143,6 +143,8 @@ interface RequestBody {
   started_at?: string;
   submission_id?: string;
   task_id?: string;
+  parent_listing_id?: string | null;
+  assigned_variant_id?: string | null;
   [key: string]: unknown;
 }
 
