@@ -20,16 +20,27 @@ function DashboardGateContent() {
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            const { error: upsertError } = await supabase
+            const { error: updateError } = await supabase
               .from('profiles')
-              .upsert({
-                id: user.id,
+              .update({
                 role: roleParam,
                 updated_at: new Date().toISOString()
               })
+              .eq('id', user.id)
             
-            if (upsertError) {
-              console.warn('Auto-role update database warning:', upsertError.message)
+            if (updateError) {
+              console.warn('Auto-role update failed, attempting insert:', updateError.message)
+              const { error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: user.id,
+                  role: roleParam,
+                  full_name: user.email?.split('@')[0] || 'User',
+                  updated_at: new Date().toISOString()
+                })
+              if (insertError) {
+                console.error('Auto-role insert failed:', insertError.message)
+              }
             }
           }
           router.push(`/dashboard/${roleParam}`)
@@ -51,16 +62,27 @@ function DashboardGateContent() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { error: upsertError } = await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
-          .upsert({
-            id: user.id,
+          .update({
             role: role,
             updated_at: new Date().toISOString()
           })
+          .eq('id', user.id)
         
-        if (upsertError) {
-          console.warn('Role update notice (database profile table uninitialized):', upsertError.message)
+        if (updateError) {
+          console.warn('Role update failed, attempting insert:', updateError.message)
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              role: role,
+              full_name: user.email?.split('@')[0] || 'User',
+              updated_at: new Date().toISOString()
+            })
+          if (insertError) {
+            console.error('Role insert failed:', insertError.message)
+          }
         }
       }
       router.push(`/dashboard/${role}`)

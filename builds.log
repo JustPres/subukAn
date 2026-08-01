@@ -12,3 +12,4 @@
 [2026-08-01 13:11:00] Build/Lint/Test Successful - Added graceful fallback in role selection gate and middleware when Supabase database profiles table is missing or uninitialized.
 [2026-08-01 13:25:00] Build/Lint/Test Successful - Refactored landing page to dynamically render login/dashboard buttons based on session state, added automatic role assignment on dashboard gate using URL query parameters, and fixed double-select navigation flow.
 [2026-08-01 13:32:00] Build/Lint/Test Successful - Implemented server-side middleware auto-redirects for returning users with active database profile roles, and updated sidebar Switch Role targets to bypass auto-redirects.
+[2026-08-01 13:37:00] Build/Lint/Test Successful - Replaced profiles upsert query with safe update/insert fallback to satisfy NOT NULL schema constraints and prevent dead role clicks.
