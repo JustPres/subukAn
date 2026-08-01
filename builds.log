@@ -18,3 +18,4 @@
 [2026-08-01 14:40:00] Build/Lint/Test Successful - Integrated error sanitization utility `sanitizeDatabaseError` into dashboard gate, poster dashboard, and tester dashboard, added comprehensive unit tests.
 [2026-08-01 15:58:00] Build/Lint/Test Successful - Fixed useCallback ReferenceError, resolved all TS compilation type errors, and integrated user-friendly error overrides in standard and 5-second task workspaces.
 [2026-08-01 17:33:00] Build/Lint/Test Successful - Renamed submission_comments columns (message_text→comment_text, sender_id→user_id), replaced all browser alert() popups with inline UI error labels in comment forms.
+[2026-08-01 18:21:00] Build/Lint/Test Successful - Refactored M2 R1 claim button logic into lib/utils/claim-button.ts, removed non-page exports from tester dashboard, updated submission status query ordering, and updated unit test imports.

@@ -12,101 +12,143 @@
 # Error details
 
 ```
-Error: expect(locator).toContainText(expected) failed
-
-Locator: locator('h1')
-Expected substring: "Poster Workspace"
-Received string:    "Welcome back"
-Timeout: 5000ms
-
-Call log:
-  - Expect "toContainText" with timeout 5000ms
-  - waiting for locator('h1')
-    13 × locator resolved to <h1 class="text-3xl font-extrabold tracking-tight mb-2 text-[#1E1E1E]">Welcome back</h1>
-       - unexpected value "Welcome back"
-
-```
-
-```yaml
-- heading "Welcome back" [level=1]
+Error: Failed to list users: {}
 ```
 
 # Test source
 
 ```ts
-  1  | import { test, expect } from '@playwright/test';
-  2  | import { bypassAuth } from './helpers';
-  3  | 
-  4  | test.describe('Poster Flow E2E', () => {
-  5  |   const email = 'test-poster@example.com';
-  6  |   const password = 'password123';
-  7  | 
-  8  |   test.beforeEach(async ({ context }) => {
-  9  |     // Log in programmatically as poster
-  10 |     await bypassAuth(context, email, password, 'poster');
-  11 |   });
-  12 | 
-  13 |   test('should create a listing and show the mock payment link', async ({ page }) => {
-  14 |     // Navigate to /dashboard/poster
-  15 |     await page.goto('/dashboard/poster');
-  16 | 
-  17 |     // Assert page header loaded
-> 18 |     await expect(page.locator('h1')).toContainText('Poster Workspace');
-     |                                      ^ Error: expect(locator).toContainText(expected) failed
-  19 | 
-  20 |     // Click "Create New Listing"
-  21 |     await page.click('text=Create New Listing');
-  22 | 
-  23 |     // Wait for modal form to be visible
-  24 |     await expect(page.locator('text=Create New Testing Round')).toBeVisible();
-  25 | 
-  26 |     const uniqueTitle = `E2E Test Listing ${Date.now()}`;
-  27 |     await page.fill('input[placeholder*="Rider App Map Pin"]', uniqueTitle);
-  28 |     await page.fill(
-  29 |       'textarea[placeholder*="Describe step-by-step"]',
-  30 |       'This is a long mock description that contains at least twenty characters to satisfy schema validation rules.'
-  31 |     );
-  32 | 
-  33 |     // Select Rate per Tester (e.g. 200)
-  34 |     await page.selectOption('select:has-text("per tester")', '200');
-  35 | 
-  36 |     // Fill slots
-  37 |     await page.fill('label:has-text("Slots Count") + input[type="number"]', '5');
-  38 | 
-  39 |     // Check "5-Second Quick Impression Test" (first checkbox in form)
-  40 |     await page.locator('input[type="checkbox"]').first().check();
-  41 | 
-  42 |     // Enable A/B Comparative Testing (second checkbox in form) and fill variant URLs
-  43 |     await page.locator('input[type="checkbox"]').nth(1).check();
-  44 |     await page.locator('input[type="url"]').first().fill('https://variant-a.example.com');
-  45 |     await page.locator('input[type="url"]').last().fill('https://variant-b.example.com');
-  46 | 
-  47 |     // Add accessibility requirements (fourth checkbox in form)
-  48 |     await page.locator('input[type="checkbox"]').nth(3).check();
-  49 | 
-  50 |     // Select Demographic filters: Tech Literacy and Age Group
-  51 |     // Age Group: 25-34 years old
-  52 |     await page.selectOption('label:has-text("Target Age Group") + select', '25-34');
-  53 |     // Tech Literacy: Non-Technical
-  54 |     await page.selectOption('label:has-text("Target Tech Literacy") + select', 'non_technical');
-  55 | 
-  56 |     // Click Confirm and Fund
-  57 |     await page.click('button[type="submit"]:has-text("Confirm and Fund")');
-  58 | 
-  59 |     // Verify sandbox payment mock link is generated and shown
-  60 |     const mockCheckoutLink = page.locator('#mock-checkout-link');
-  61 |     await expect(mockCheckoutLink).toBeVisible();
-  62 |     const hrefValue = await mockCheckoutLink.getAttribute('href');
-  63 |     expect(hrefValue).toContain('https://checkout.paymongo.com/mock/');
-  64 | 
-  65 |     // Click Done to close the success screen
-  66 |     await page.click('button:has-text("Done")');
-  67 | 
-  68 |     // Verify the new listing appears in the main dashboard table with "Open / Funding"
-  69 |     await expect(page.locator('table')).toContainText(uniqueTitle);
-  70 |     const row = page.locator('tr', { hasText: uniqueTitle });
-  71 |     await expect(row.locator('text=Open / Funding')).toBeVisible();
-  72 |   });
-  73 | });
-  74 | 
+  1   | import { createClient, User, Session } from '@supabase/supabase-js';
+  2   | import { BrowserContext } from '@playwright/test';
+  3   | 
+  4   | const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  5   | const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  6   | const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  7   | 
+  8   | if (!supabaseUrl || !supabaseServiceKey) {
+  9   |   throw new Error('Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are required.');
+  10  | }
+  11  | 
+  12  | const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  13  |   auth: {
+  14  |     persistSession: false,
+  15  |     autoRefreshToken: false,
+  16  |   },
+  17  | });
+  18  | 
+  19  | const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  20  |   auth: {
+  21  |     persistSession: false,
+  22  |     autoRefreshToken: false,
+  23  |   },
+  24  | });
+  25  | 
+  26  | /**
+  27  |  * Ensures a test user exists in Supabase Auth and has the correct profile role.
+  28  |  */
+  29  | export async function getOrCreateUser(email: string, password: string, role: 'poster' | 'tester'): Promise<User> {
+  30  |   const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+  31  |   if (listError) {
+> 32  |     throw new Error(`Failed to list users: ${listError.message}`);
+      |           ^ Error: Failed to list users: {}
+  33  |   }
+  34  | 
+  35  |   let user = users.find((u) => u.email === email);
+  36  | 
+  37  |   if (!user) {
+  38  |     const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+  39  |       email,
+  40  |       password,
+  41  |       email_confirm: true,
+  42  |       user_metadata: {
+  43  |         role,
+  44  |         full_name: role === 'poster' ? 'Test Poster' : 'Test Tester',
+  45  |         device_type: 'desktop',
+  46  |         tech_comfort_level: role === 'poster' ? 'casual_user' : 'non_technical',
+  47  |         phone_verified: true,
+  48  |       },
+  49  |     });
+  50  | 
+  51  |     if (createError || !createData.user) {
+  52  |       throw new Error(`Failed to create user ${email}: ${createError?.message}`);
+  53  |     }
+  54  |     user = createData.user;
+  55  |   } else {
+  56  |     // If the user already exists, ensure their profile role is synchronized
+  57  |     const { error: profileError } = await supabaseAdmin
+  58  |       .from('profiles')
+  59  |       .upsert({
+  60  |         id: user.id,
+  61  |         role,
+  62  |         full_name: role === 'poster' ? 'Test Poster' : 'Test Tester',
+  63  |         device_type: 'desktop',
+  64  |         tech_comfort_level: role === 'poster' ? 'casual_user' : 'non_technical',
+  65  |         phone_verified: true,
+  66  |         age_group: role === 'tester' ? '25-34' : null,
+  67  |       });
+  68  | 
+  69  |     if (profileError) {
+  70  |       console.warn(`Warning: failed to sync profile for existing user: ${profileError.message}`);
+  71  |     }
+  72  |   }
+  73  | 
+  74  |   return user;
+  75  | }
+  76  | 
+  77  | /**
+  78  |  * Log in with email and password and return the session details.
+  79  |  */
+  80  | export async function loginAndGetSession(email: string, password: string): Promise<Session> {
+  81  |   const { data, error } = await supabaseClient.auth.signInWithPassword({
+  82  |     email,
+  83  |     password,
+  84  |   });
+  85  | 
+  86  |   if (error || !data.session) {
+  87  |     throw new Error(`Failed to sign in with password for ${email}: ${error?.message}`);
+  88  |   }
+  89  | 
+  90  |   return data.session;
+  91  | }
+  92  | 
+  93  | /**
+  94  |  * Sets the Supabase session cookie on the browser context to bypass UI login.
+  95  |  */
+  96  | export async function bypassAuth(context: BrowserContext, email: string, password: string, role: 'poster' | 'tester'): Promise<void> {
+  97  |   await getOrCreateUser(email, password, role);
+  98  |   const session = await loginAndGetSession(email, password);
+  99  | 
+  100 |   // Set multiple potential storage keys to cover various Supabase config ref parsing styles
+  101 |   const cookieNames = [
+  102 |     'sb-laecyjtfezewxavfzulj-auth-token', // Custom / standard ref
+  103 |     'sb-localhost-auth-token',           // Localhost hostname fallback
+  104 |     'sb-localhost-3000-auth-token',      // Localhost with port fallback
+  105 |     'sb-auth-token',                     // Default generic fallback
+  106 |   ];
+  107 | 
+  108 |   const cookieValue = encodeURIComponent(JSON.stringify(session));
+  109 | 
+  110 |   await context.addCookies(
+  111 |     cookieNames.map((name) => ({
+  112 |       name,
+  113 |       value: cookieValue,
+  114 |       domain: 'localhost',
+  115 |       path: '/',
+  116 |       expires: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
+  117 |       secure: false, // Local HTTP development setup
+  118 |       sameSite: 'Lax',
+  119 |     }))
+  120 |   );
+  121 | }
+  122 | 
+  123 | /**
+  124 |  * Creates a mock listing for testing.
+  125 |  */
+  126 | export async function createMockListing(title: string, isQuickImpression: boolean) {
+  127 |   const poster = await getOrCreateUser('test-poster@example.com', 'password123', 'poster');
+  128 | 
+  129 |   // Delete existing listing with the same title to avoid duplicate/leftover records
+  130 |   await supabaseAdmin
+  131 |     .from('listings')
+  132 |     .delete()
 ```

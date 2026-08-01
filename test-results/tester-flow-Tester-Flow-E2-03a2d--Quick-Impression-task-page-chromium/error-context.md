@@ -12,159 +12,143 @@
 # Error details
 
 ```
-Error: expect(locator).toBeVisible() failed
-
-Locator: locator('text=Acknowledge Testing Guidelines')
-Expected: visible
-Timeout: 5000ms
-Error: element(s) not found
-
-Call log:
-  - Expect "toBeVisible" with timeout 5000ms
-  - waiting for locator('text=Acknowledge Testing Guidelines')
-
-```
-
-```yaml
-- main:
-  - text: subukAn PILOT
-  - heading "Welcome back" [level=1]
-  - paragraph: Sign in to manage listings, submit app tests, and track secure escrow payouts.
-  - text: Email Address
-  - textbox "e.g. test-poster@example.com"
-  - text: Password
-  - textbox "••••••••"
-  - button "Sign In with Email"
-  - text: OR
-  - button "Continue with Google":
-    - img
-    - text: Continue with Google
-  - button "Continue with GitHub":
-    - img
-    - text: Continue with GitHub
-  - paragraph:
-    - strong: "Role Routing:"
-    - text: After authenticating, you will choose whether to enter the
-    - strong: Poster Dashboard
-    - text: (to post test listings and set up escrow) or the
-    - strong: Tester Dashboard
-    - text: (to complete task checklists and receive payments).
-  - paragraph:
-    - strong: "Secure Escrow:"
-    - text: Testing allocations are secured safely via our integrated payment gateway (PayMongo/Xendit) before tasks are released.
-  - link "Go back to homepage":
-    - /url: /
-    - text: Go back to homepage
-    - img
-  - text: © 2026 subukAn. All rights reserved. Security Policy Terms of Service Privacy Policy
-- alert
+Error: Failed to list users: {}
 ```
 
 # Test source
 
 ```ts
-  1   | import { test, expect } from '@playwright/test';
-  2   | import { bypassAuth, createMockListing } from './helpers';
+  1   | import { createClient, User, Session } from '@supabase/supabase-js';
+  2   | import { BrowserContext } from '@playwright/test';
   3   | 
-  4   | test.describe('Tester Flow E2E', () => {
-  5   |   const email = 'test-tester@example.com';
-  6   |   const password = 'password123';
+  4   | const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  5   | const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  6   | const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   7   | 
-  8   |   test.beforeEach(async ({ context }) => {
-  9   |     // Log in programmatically as tester
-  10  |     await bypassAuth(context, email, password, 'tester');
-  11  |   });
-  12  | 
-  13  |   test('should view tester workspace and access demographics modal', async ({ page }) => {
-  14  |     // Navigate to /dashboard/tester
-  15  |     await page.goto('/dashboard/tester');
-  16  | 
-  17  |     // Assert page loaded
-  18  |     await expect(page.locator('h1')).toContainText('Tester Workspace');
-  19  |     await expect(page.locator('text=Verified GCash Receiver')).toBeVisible();
-  20  | 
-  21  |     // Verify demographic profile configuration modal can be opened
-  22  |     await page.click('text=Configure Demographics');
-  23  |     await expect(page.locator('h3:has-text("Configure Profile Demographics")')).toBeVisible();
-  24  | 
-  25  |     // Check one accessibility option
-  26  |     await page.locator('label:has-text("I navigate using Keyboard-Only") input').check();
-  27  | 
-  28  |     // Close the modal
-  29  |     await page.click('button:has-text("Cancel")');
-  30  |     await expect(page.locator('h3:has-text("Configure Profile Demographics")')).not.toBeVisible();
-  31  |   });
-  32  | 
-  33  |   test('should complete the 5-second Quick Impression task page', async ({ page }) => {
-  34  |     // Create a mock listing with is_quick_impression: true
-  35  |     const uniqueTitle = `E2E Tester Job ${Date.now()}`;
-  36  |     const listing = await createMockListing(uniqueTitle, true);
-  37  | 
-  38  |     // Navigate to /dashboard/tester/tasks/five-second/[id]
-  39  |     await page.goto(`/dashboard/tester/tasks/five-second/${listing.id}`);
-  40  | 
-  41  |     // Wait for the agreement modal to be visible
-> 42  |     await expect(page.locator('text=Acknowledge Testing Guidelines')).toBeVisible();
-      |                                                                       ^ Error: expect(locator).toBeVisible() failed
-  43  | 
-  44  |     // Scroll to bottom of the Agreement modal to enable the Accept button
-  45  |     const ndaScroll = page.locator('.overflow-y-auto.flex-1');
-  46  |     await ndaScroll.evaluate(async (el) => {
-  47  |       el.scrollTop = el.scrollHeight;
-  48  |       el.dispatchEvent(new Event('scroll'));
-  49  |       await new Promise(resolve => setTimeout(resolve, 50));
-  50  |       el.scrollTop = el.scrollHeight;
-  51  |       el.dispatchEvent(new Event('scroll'));
-  52  |     });
-  53  | 
-  54  |     // Accept the agreement
-  55  |     await page.click('button:has-text("Accept")');
-  56  | 
-  57  |     // Assert the cover page loaded with correct title
-  58  |     await expect(page.locator('h1')).toContainText(uniqueTitle);
-  59  | 
-  60  |     // Verify the "Start 5-Second Test" button is visible and click it
-  61  |     const startButton = page.locator('button:has-text("Start 5-Second Test")');
-  62  |     await expect(startButton).toBeVisible();
-  63  |     await startButton.click();
-  64  | 
-  65  |     // Verify the impression countdown timer loads and displays
-  66  |     await expect(page.locator('text=Viewing:')).toBeVisible();
-  67  | 
-  68  |     // Click on the design image to register a click (first-click heatmap coordinates)
-  69  |     const designImg = page.locator('img[alt*="Design screenshot"]');
-  70  |     await expect(designImg).toBeVisible();
-  71  |     await designImg.click();
-  72  | 
-  73  |     // Wait for it to expire and transition to the questionnaire step (takes 5 seconds)
-  74  |     await expect(page.locator('text=What do you remember about the design?')).toBeVisible({ timeout: 10000 });
-  75  | 
-  76  |     // Verify the questionnaire step enables the response form
-  77  |     const responseTextArea = page.locator('textarea');
-  78  |     await expect(responseTextArea).toBeEnabled();
-  79  | 
-  80  |     // Fill in the questionnaire response
-  81  |     await responseTextArea.fill('The design looked extremely clean and well structured, focusing on banking styles.');
-  82  | 
-  83  |     // Select visual clarity rating (e.g. 5)
-  84  |     await page.click('button:has-text("5")');
+  8   | if (!supabaseUrl || !supabaseServiceKey) {
+  9   |   throw new Error('Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are required.');
+  10  | }
+  11  | 
+  12  | const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  13  |   auth: {
+  14  |     persistSession: false,
+  15  |     autoRefreshToken: false,
+  16  |   },
+  17  | });
+  18  | 
+  19  | const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  20  |   auth: {
+  21  |     persistSession: false,
+  22  |     autoRefreshToken: false,
+  23  |   },
+  24  | });
+  25  | 
+  26  | /**
+  27  |  * Ensures a test user exists in Supabase Auth and has the correct profile role.
+  28  |  */
+  29  | export async function getOrCreateUser(email: string, password: string, role: 'poster' | 'tester'): Promise<User> {
+  30  |   const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+  31  |   if (listError) {
+> 32  |     throw new Error(`Failed to list users: ${listError.message}`);
+      |           ^ Error: Failed to list users: {}
+  33  |   }
+  34  | 
+  35  |   let user = users.find((u) => u.email === email);
+  36  | 
+  37  |   if (!user) {
+  38  |     const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+  39  |       email,
+  40  |       password,
+  41  |       email_confirm: true,
+  42  |       user_metadata: {
+  43  |         role,
+  44  |         full_name: role === 'poster' ? 'Test Poster' : 'Test Tester',
+  45  |         device_type: 'desktop',
+  46  |         tech_comfort_level: role === 'poster' ? 'casual_user' : 'non_technical',
+  47  |         phone_verified: true,
+  48  |       },
+  49  |     });
+  50  | 
+  51  |     if (createError || !createData.user) {
+  52  |       throw new Error(`Failed to create user ${email}: ${createError?.message}`);
+  53  |     }
+  54  |     user = createData.user;
+  55  |   } else {
+  56  |     // If the user already exists, ensure their profile role is synchronized
+  57  |     const { error: profileError } = await supabaseAdmin
+  58  |       .from('profiles')
+  59  |       .upsert({
+  60  |         id: user.id,
+  61  |         role,
+  62  |         full_name: role === 'poster' ? 'Test Poster' : 'Test Tester',
+  63  |         device_type: 'desktop',
+  64  |         tech_comfort_level: role === 'poster' ? 'casual_user' : 'non_technical',
+  65  |         phone_verified: true,
+  66  |         age_group: role === 'tester' ? '25-34' : null,
+  67  |       });
+  68  | 
+  69  |     if (profileError) {
+  70  |       console.warn(`Warning: failed to sync profile for existing user: ${profileError.message}`);
+  71  |     }
+  72  |   }
+  73  | 
+  74  |   return user;
+  75  | }
+  76  | 
+  77  | /**
+  78  |  * Log in with email and password and return the session details.
+  79  |  */
+  80  | export async function loginAndGetSession(email: string, password: string): Promise<Session> {
+  81  |   const { data, error } = await supabaseClient.auth.signInWithPassword({
+  82  |     email,
+  83  |     password,
+  84  |   });
   85  | 
-  86  |     // Click submit button
-  87  |     await page.click('button:has-text("Submit Test Output")');
-  88  | 
-  89  |     // Verify successful submission UI loading
-  90  |     await expect(page.locator('text=Submitted!')).toBeVisible({ timeout: 10000 });
-  91  |     await expect(page.locator('text=Post-Test Debrief Thread')).toBeVisible();
+  86  |   if (error || !data.session) {
+  87  |     throw new Error(`Failed to sign in with password for ${email}: ${error?.message}`);
+  88  |   }
+  89  | 
+  90  |   return data.session;
+  91  | }
   92  | 
-  93  |     // Type a comment and hit Send
-  94  |     const commentInput = page.locator('input[placeholder*="Type your comment"]');
-  95  |     await expect(commentInput).toBeVisible();
-  96  |     await commentInput.fill('This is an E2E test comment.');
-  97  |     await page.click('button:has-text("Send")');
-  98  | 
-  99  |     // Assert that the comment appears on the screen
-  100 |     await expect(page.locator('text=This is an E2E test comment.')).toBeVisible();
-  101 |   });
-  102 | });
-  103 | 
+  93  | /**
+  94  |  * Sets the Supabase session cookie on the browser context to bypass UI login.
+  95  |  */
+  96  | export async function bypassAuth(context: BrowserContext, email: string, password: string, role: 'poster' | 'tester'): Promise<void> {
+  97  |   await getOrCreateUser(email, password, role);
+  98  |   const session = await loginAndGetSession(email, password);
+  99  | 
+  100 |   // Set multiple potential storage keys to cover various Supabase config ref parsing styles
+  101 |   const cookieNames = [
+  102 |     'sb-laecyjtfezewxavfzulj-auth-token', // Custom / standard ref
+  103 |     'sb-localhost-auth-token',           // Localhost hostname fallback
+  104 |     'sb-localhost-3000-auth-token',      // Localhost with port fallback
+  105 |     'sb-auth-token',                     // Default generic fallback
+  106 |   ];
+  107 | 
+  108 |   const cookieValue = encodeURIComponent(JSON.stringify(session));
+  109 | 
+  110 |   await context.addCookies(
+  111 |     cookieNames.map((name) => ({
+  112 |       name,
+  113 |       value: cookieValue,
+  114 |       domain: 'localhost',
+  115 |       path: '/',
+  116 |       expires: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
+  117 |       secure: false, // Local HTTP development setup
+  118 |       sameSite: 'Lax',
+  119 |     }))
+  120 |   );
+  121 | }
+  122 | 
+  123 | /**
+  124 |  * Creates a mock listing for testing.
+  125 |  */
+  126 | export async function createMockListing(title: string, isQuickImpression: boolean) {
+  127 |   const poster = await getOrCreateUser('test-poster@example.com', 'password123', 'poster');
+  128 | 
+  129 |   // Delete existing listing with the same title to avoid duplicate/leftover records
+  130 |   await supabaseAdmin
+  131 |     .from('listings')
+  132 |     .delete()
 ```

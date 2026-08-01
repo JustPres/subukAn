@@ -22,23 +22,7 @@ import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
-
-interface JobListing {
-  id: string;
-  title: string;
-  description: string;
-  rate_per_tester: number;
-  slots_count: number;
-  slots_filled: number;
-  requires_recording: boolean;
-  requires_image: boolean;
-  question_text: string;
-  is_quick_impression: boolean;
-  target_age_group?: string | null;
-  target_gender?: string | null;
-  target_employment_status?: string | null;
-  target_tech_literacy?: string | null;
-}
+import { JobListing, ButtonConfig, getButtonConfig } from '@/lib/utils/claim-button'
 
 const AVAILABLE_JOBS: JobListing[] = [
   {
@@ -252,8 +236,29 @@ export default function TesterDashboard() {
       if (listingsError) {
         setLoadingError(sanitizeDatabaseError(listingsError, 'Failed to load listings.'))
       } else {
+        // Fetch tester's active/past submissions from Supabase to track status per listing
+        let userSubmissions: { id: string; listing_id: string; status: string }[] = []
+        try {
+          const { data: userSubsData } = await supabase
+            .from('submissions')
+            .select('id, listing_id, status')
+            .eq('tester_id', user.id)
+            .order('created_at', { ascending: false })
+
+          if (userSubsData) {
+            userSubmissions = userSubsData
+          }
+        } catch (err) {
+          console.warn('Could not fetch user submissions:', err)
+        }
+
         const mapped = (listingsData || []).map((listing: any) => {
           const firstTask = listing.tasks?.[0]
+          
+          // Match active or completed non-expired user submission
+          const userSub = userSubmissions.find((s) => s.listing_id === listing.id && s.status !== 'expired')
+          const userSubmissionStatus = (userSub ? userSub.status : null) as 'in_progress' | 'pending_review' | 'approved' | 'rejected' | null
+
           return {
             id: listing.id,
             title: listing.title,
@@ -272,6 +277,7 @@ export default function TesterDashboard() {
             target_employment_status: listing.target_employment_status,
             target_tech_literacy: listing.target_tech_literacy,
             target_accessibility_tags: listing.target_accessibility_tags,
+            user_submission_status: userSubmissionStatus,
           }
         })
 
@@ -556,7 +562,8 @@ export default function TesterDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {listings.map((job) => {
-                  const isFull = job.slots_filled >= job.slots_count
+                  const btnConfig = getButtonConfig(job)
+                  const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
                   return (
                     <div 
                       key={job.id} 
@@ -568,11 +575,11 @@ export default function TesterDashboard() {
                         <div className="flex justify-between items-start mb-4">
                           <span className="text-xl font-black text-emerald-700">₱{job.rate_per_tester}</span>
                           <span className={`text-xs px-2.5 py-1 rounded-[8px] border font-bold ${
-                            isFull 
+                            job.slots_filled >= job.slots_count
                               ? 'bg-gray-100 text-gray-500 border-gray-200' 
                               : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                           }`}>
-                            {isFull ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
+                            {job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
                           </span>
                         </div>
                         
@@ -607,14 +614,15 @@ export default function TesterDashboard() {
                       </div>
   
                       <Link
-                        href={isFull ? '#' : (job.is_quick_impression ? `/dashboard/tester/tasks/five-second/${job.id}` : `/dashboard/tester/tasks/${job.id}`)}
-                        className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all flex items-center justify-center ${
-                          isFull 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 pointer-events-none'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                        }`}
+                        href={btnConfig.href}
+                        className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all flex items-center justify-center ${btnConfig.className}`}
+                        onClick={(e) => {
+                          if (btnConfig.disabled) {
+                            e.preventDefault();
+                          }
+                        }}
                       >
-                        {isFull ? 'Unclickable (Full)' : 'Claim Slot & Start Test'}
+                        {btnConfig.text}
                       </Link>
                     </div>
                   )
