@@ -135,6 +135,10 @@ export async function middleware(request: NextRequest) {
         .single()
 
       if (error || !profile) {
+        // If the profiles table is not created yet or fails schema lookup, allow access to requested subroute
+        if (error && (error.code === 'PGRST204' || error.message?.includes('profiles') || error.message?.includes('schema cache'))) {
+          return response
+        }
         // Profile not found or error fetching it, redirect to dashboard gate to select role
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }

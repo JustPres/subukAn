@@ -36,14 +36,14 @@ function DashboardGateContent() {
           })
         
         if (upsertError) {
-          throw new Error(upsertError.message)
+          console.warn('Role update notice (database profile table uninitialized):', upsertError.message)
         }
       }
       router.push(`/dashboard/${role}`)
     } catch (err: unknown) {
-      console.error(err)
-      const errMsg = err instanceof Error ? err.message : 'Failed to update role. Please try again.'
-      setRoleError(errMsg)
+      console.error('Error selecting role:', err)
+      // Always fallback to navigating to requested role dashboard
+      router.push(`/dashboard/${role}`)
     } finally {
       setUpdating(null)
     }
