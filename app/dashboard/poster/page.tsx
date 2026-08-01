@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 interface Listing {
   id: string;
@@ -102,7 +103,7 @@ export default function PosterDashboard() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        setLoadingError(error.message)
+        setLoadingError(sanitizeDatabaseError(error, 'Failed to retrieve listings.'))
       } else {
         const mappedListings = (data || []).map((listing: any) => ({
           ...listing,
@@ -113,7 +114,7 @@ export default function PosterDashboard() {
         setListings(mappedListings)
       }
     } catch (err) {
-      setLoadingError(err instanceof Error ? err.message : 'Failed to retrieve listings.')
+      setLoadingError(sanitizeDatabaseError(err, 'Failed to retrieve listings.'))
     } finally {
       setLoading(false)
     }
@@ -223,7 +224,7 @@ export default function PosterDashboard() {
         .single()
 
       if (listingError) {
-        throw new Error(listingError.message)
+        throw listingError
       }
 
       if (!newListing) {
@@ -244,7 +245,7 @@ export default function PosterDashboard() {
         .insert(tasksData)
 
       if (tasksError) {
-        throw new Error(`Listing created, but failed to insert questions: ${tasksError.message}`)
+        throw tasksError
       }
 
       // 3. Reset form
@@ -277,7 +278,7 @@ export default function PosterDashboard() {
       // 4. Refresh listings
       await fetchUserAndListings()
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'An error occurred during submission.')
+      setSubmitError(sanitizeDatabaseError(err, 'An error occurred during submission.'))
     } finally {
       setIsSubmitting(false)
     }

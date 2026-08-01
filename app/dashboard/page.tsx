@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldCheck, UserCheck, Briefcase, Award, Loader2, AlertCircle } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 function DashboardGateContent() {
   const router = useRouter()
@@ -17,6 +18,7 @@ function DashboardGateContent() {
     const autoAssignRole = async () => {
       if (roleParam === 'poster' || roleParam === 'tester') {
         setUpdating(roleParam)
+        setRoleError(null)
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
@@ -37,6 +39,7 @@ function DashboardGateContent() {
                 .eq('id', user.id)
               if (updateError) {
                 console.error('Auto-role update failed:', updateError.message)
+                setRoleError(sanitizeDatabaseError(updateError))
               }
             } else {
               const { error: insertError } = await supabase
@@ -49,12 +52,14 @@ function DashboardGateContent() {
                 })
               if (insertError) {
                 console.error('Auto-role insert failed:', insertError.message)
+                setRoleError(sanitizeDatabaseError(insertError))
               }
             }
           }
           router.push(`/dashboard/${roleParam}`)
         } catch (err) {
           console.error('Error auto-assigning role:', err)
+          setRoleError(sanitizeDatabaseError(err))
           router.push(`/dashboard/${roleParam}`)
         } finally {
           setUpdating(null)
@@ -88,6 +93,7 @@ function DashboardGateContent() {
             .eq('id', user.id)
           if (updateError) {
             console.error('Role update failed:', updateError.message)
+            setRoleError(sanitizeDatabaseError(updateError))
           }
         } else {
           const { error: insertError } = await supabase
@@ -100,12 +106,14 @@ function DashboardGateContent() {
             })
           if (insertError) {
             console.error('Role insert failed:', insertError.message)
+            setRoleError(sanitizeDatabaseError(insertError))
           }
         }
       }
       router.push(`/dashboard/${role}`)
     } catch (err: unknown) {
       console.error('Error selecting role:', err)
+      setRoleError(sanitizeDatabaseError(err))
       // Always fallback to navigating to requested role dashboard
       router.push(`/dashboard/${role}`)
     } finally {

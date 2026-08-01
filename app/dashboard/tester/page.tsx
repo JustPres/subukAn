@@ -21,6 +21,7 @@ import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 interface JobListing {
   id: string;
@@ -206,7 +207,7 @@ export default function TesterDashboard() {
       }
 
       if (profileError || !profileData) {
-        setLoadingError('Failed to retrieve user profile.')
+        setLoadingError(sanitizeDatabaseError(profileError, 'Failed to retrieve user profile.'))
         setLoading(false)
         return
       }
@@ -249,7 +250,7 @@ export default function TesterDashboard() {
         .eq('status', 'open')
 
       if (listingsError) {
-        setLoadingError(listingsError.message)
+        setLoadingError(sanitizeDatabaseError(listingsError, 'Failed to load listings.'))
       } else {
         const mapped = (listingsData || []).map((listing: any) => {
           const firstTask = listing.tasks?.[0]
@@ -292,7 +293,7 @@ export default function TesterDashboard() {
         setListings(filtered)
       }
     } catch (err) {
-      setLoadingError(err instanceof Error ? err.message : 'An error occurred.')
+      setLoadingError(sanitizeDatabaseError(err, 'An error occurred.'))
     } finally {
       setLoading(false)
     }
@@ -336,8 +337,7 @@ export default function TesterDashboard() {
       setIsProfileModalOpen(false)
       await fetchProfileAndListings()
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Unknown error'
-      alert('Failed to update profile: ' + errMsg)
+      alert('Failed to update profile: ' + sanitizeDatabaseError(err))
     }
   }
 
