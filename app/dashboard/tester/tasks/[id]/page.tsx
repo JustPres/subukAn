@@ -20,6 +20,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
+import { WorkspaceStatusCard } from '@/components/shared/WorkspaceStatusCard'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 interface Listing {
@@ -291,8 +292,8 @@ export default function TaskWorkspacePage() {
             if (tasksData.length > 0) {
               setActiveTaskId(tasksData[0].id);
             }
-          } else if (submissionData.status === 'pending_review' || submissionData.status === 'approved' || submissionData.status === 'rejected') {
-            setCurrentStep('submitted');
+          } else if (['pending_review', 'approved', 'rejected', 'submitted'].includes(submissionData.status)) {
+            setCurrentStep(submissionData.status);
             await fetchComments(submissionData.id);
           } else if (submissionData.status === 'expired') {
             setCurrentStep('expired');
@@ -744,7 +745,7 @@ export default function TaskWorkspacePage() {
       const submittedAt = new Date();
       const autoReleaseAt = new Date(submittedAt.getTime() + listing.review_window_minutes * 60 * 1000);
       
-      const { error: subUpdateErr } = await supabase
+      const { data: updatedSub, error: subUpdateErr } = await supabase
         .from('submissions')
         .update({
           status: finalStatus,
@@ -753,16 +754,29 @@ export default function TaskWorkspacePage() {
           device_fingerprint: getFingerprint(),
           ip_address: ipAddress
         })
-        .eq('id', submission.id);
+        .eq('id', submission.id)
+        .select()
+        .single();
         
       if (subUpdateErr) {
         throw new Error('Failed to update submission records: ' + subUpdateErr.message);
       }
       
+      if (updatedSub) {
+        setSubmission(updatedSub);
+      } else {
+        setSubmission((prev: any) => ({
+          ...prev,
+          status: finalStatus,
+          submitted_at: submittedAt.toISOString(),
+          auto_release_at: autoReleaseAt.toISOString(),
+        }));
+      }
+
       if (finalStatus === 'pending_review') {
         await fetchComments(submission.id);
       }
-      setCurrentStep(finalStatus === 'pending_review' ? 'submitted' : 'expired');
+      setCurrentStep(finalStatus === 'pending_review' ? 'pending_review' : 'expired');
     } catch (err: any) {
       console.error('Submission failed:', err);
       alert(err.message || 'An error occurred while saving your testing responses.');
@@ -819,33 +833,13 @@ export default function TaskWorkspacePage() {
     );
   }
 
-  if (currentStep === 'submitted' && listing) {
+  if (['submitted', 'pending_review', 'approved', 'rejected'].includes(currentStep) && listing) {
     return (
       <div className="min-h-screen bg-[#fcfcfc] py-12 px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Success card (Left column, 1/3 width) */}
+          {/* Status card (Left column, 1/3 width) */}
           <div className="md:col-span-1 space-y-6">
-            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm text-center space-y-6 animate-fadeIn">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-gray-900">Submitted!</h2>
-                <p className="text-xs text-gray-500 mt-2 leading-relaxed font-medium">
-                  Your feedback is now pending review. The poster has up to{' '}
-                  <span className="font-bold text-gray-800">{listing.review_window_minutes} minutes</span> to review.
-                </p>
-                <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-2.5 py-1 inline-block mt-3">
-                  ₱{listing.rate_per_tester.toFixed(2)} in Escrow
-                </p>
-              </div>
-              <Link
-                href="/dashboard/tester"
-                className="block w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[8px] text-xs shadow-sm transition-all text-center"
-              >
-                Return to Dashboard
-              </Link>
-            </div>
+            <WorkspaceStatusCard submission={submission} listing={listing} />
           </div>
 
           {/* Post-Test Debrief Thread (Right column, 2/3 width) */}

@@ -87,7 +87,7 @@ test.describe('Tester Flow E2E', () => {
     await page.click('button:has-text("Submit Test Output")');
 
     // Verify successful submission UI loading
-    await expect(page.locator('text=Submitted!')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2:has-text("Submission Under Review")')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Post-Test Debrief Thread')).toBeVisible();
 
     // Type a comment and hit Send

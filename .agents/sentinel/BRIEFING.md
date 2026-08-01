@@ -6,7 +6,7 @@ Complete missing UX & transactional flows for Poster and Tester roles, and perfo
 ## 🔒 My Identity
 - Archetype: sentinel
 - Working directory: c:\Users\justi\Development\subukAn\.agents\sentinel
-- Orchestrator: cf13e879-8e57-4e86-9c61-97c7499eb4f6
+- Orchestrator: 5ef4c379-8cbe-411d-9b8c-57967854dee5 (Gen2 successor)
 - Victory Auditor: to be spawned on victory claim
 
 ## 🔒 Key Constraints
