@@ -20,8 +20,11 @@ export default function LoginPage() {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)
         const redirectedFrom = params.get('redirectedFrom')
+        const role = params.get('role')
         if (redirectedFrom) {
           redirectTo += `?next=${encodeURIComponent(redirectedFrom)}`
+        } else if (role === 'poster' || role === 'tester') {
+          redirectTo += `?next=${encodeURIComponent(`/dashboard?role=${role}`)}`
         }
       }
 
@@ -63,8 +66,11 @@ export default function LoginPage() {
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search)
           const redirectedFrom = params.get('redirectedFrom')
+          const role = params.get('role')
           if (redirectedFrom && redirectedFrom.startsWith('/')) {
             redirectTo = redirectedFrom
+          } else if (role === 'poster' || role === 'tester') {
+            redirectTo = `/dashboard?role=${role}`
           }
         }
         window.location.href = redirectTo

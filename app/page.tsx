@@ -1,7 +1,42 @@
+'use client'
+
 /* eslint-disable @next/next/no-img-element */
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { createBrowserClient } from '@/lib/supabase/client'
 
 export default function Home() {
+  const [user, setUser] = useState<unknown | null>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createBrowserClient()
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
+      } catch (err) {
+        console.error('Session fetch failed on home:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [supabase])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.reload()
+  }
+
   return (
     <div className="flex-1 flex flex-col">
       {/* Navigation */}
@@ -17,18 +52,41 @@ export default function Home() {
             <a href="#status-showcase" className="hover:text-ink transition-colors">Status Tokens</a>
           </nav>
           <div className="flex items-center space-x-3">
-            <Link 
-              href="/dashboard/tester" 
-              className="px-4 py-2 border border-steel text-sm font-semibold rounded-button text-slate hover:text-ink hover:bg-canvas transition-all"
-            >
-              Tester Portal
-            </Link>
-            <Link 
-              href="/dashboard/poster" 
-              className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-button shadow-sm transition-all"
-            >
-              Post a Test
-            </Link>
+            {!loading && (
+              <>
+                {!user ? (
+                  <>
+                    <Link 
+                      href="/auth/login" 
+                      className="px-4 py-2 border border-steel text-sm font-semibold rounded-button text-slate hover:text-ink hover:bg-canvas transition-all"
+                    >
+                      Log In
+                    </Link>
+                    <Link 
+                      href="/auth/login?role=poster" 
+                      className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-button shadow-sm transition-all"
+                    >
+                      Post a Test
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      href="/dashboard" 
+                      className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-button shadow-sm transition-all"
+                    >
+                      Go to Dashboard
+                    </Link>
+                    <button 
+                      onClick={handleLogout}
+                      className="px-4 py-2 border border-steel text-sm font-semibold rounded-button text-slate hover:text-ink hover:bg-canvas transition-all cursor-pointer"
+                    >
+                      Log Out
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -49,24 +107,42 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link 
-              href="/dashboard/poster" 
-              className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-base transition-all flex items-center justify-center space-x-2"
-            >
-              <span>Build & Deploy Tests</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </Link>
-            <Link 
-              href="/dashboard/tester" 
-              className="w-full sm:w-auto px-8 py-4 border border-steel hover:border-slate text-ink bg-white font-bold rounded-button text-base transition-all hover:bg-canvas flex items-center justify-center space-x-2"
-            >
-              <span>Become a Tester</span>
-              <svg className="w-5 h-5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </Link>
+            {!loading && (
+              <>
+                {!user ? (
+                  <>
+                    <Link 
+                      href="/auth/login?role=poster" 
+                      className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-base transition-all flex items-center justify-center space-x-2"
+                    >
+                      <span>Build & Deploy Tests</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </Link>
+                    <Link 
+                      href="/auth/login?role=tester" 
+                      className="w-full sm:w-auto px-8 py-4 border border-steel hover:border-slate text-ink bg-white font-bold rounded-button text-base transition-all hover:bg-canvas flex items-center justify-center space-x-2"
+                    >
+                      <span>Become a Tester</span>
+                      <svg className="w-5 h-5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </Link>
+                  </>
+                ) : (
+                  <Link 
+                    href="/dashboard" 
+                    className="w-full sm:w-auto px-12 py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-base transition-all flex items-center justify-center space-x-2 shadow-md"
+                  >
+                    <span>Open Dashboard Workspace</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </Link>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -148,7 +224,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard/poster?tier=micro" 
+                href={user ? "/dashboard/poster?tier=micro" : "/auth/login?role=poster"}
                 className="w-full text-center py-3 bg-white border border-steel hover:border-slate text-ink rounded-button text-sm font-bold transition-all hover:bg-canvas"
               >
                 Create Micro Test
@@ -181,7 +257,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard/poster?tier=functional" 
+                href={user ? "/dashboard/poster?tier=functional" : "/auth/login?role=poster"}
                 className="w-full text-center py-3 bg-primary hover:bg-primary-hover text-white rounded-button text-sm font-bold transition-all shadow-sm"
               >
                 Create Functional Test
@@ -214,7 +290,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard/poster?tier=audit" 
+                href={user ? "/dashboard/poster?tier=audit" : "/auth/login?role=poster"}
                 className="w-full text-center py-3 bg-white border border-steel hover:border-slate text-ink rounded-button text-sm font-bold transition-all hover:bg-canvas"
               >
                 Request Deep Audit
@@ -370,8 +446,15 @@ export default function Home() {
             <span>&copy; {new Date().getFullYear()}</span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
-            <Link href="/dashboard/poster" className="hover:text-ink transition-colors">Poster Dashboard</Link>
-            <Link href="/dashboard/tester" className="hover:text-ink transition-colors">Tester Dashboard</Link>
+            {!loading && (
+              <>
+                {!user ? (
+                  <Link href="/auth/login" className="hover:text-ink transition-colors">Portal Login</Link>
+                ) : (
+                  <Link href="/dashboard" className="hover:text-ink transition-colors">Go to Dashboard</Link>
+                )}
+              </>
+            )}
             <Link href="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
           </div>

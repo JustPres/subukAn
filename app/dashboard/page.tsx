@@ -14,12 +14,36 @@ function DashboardGateContent() {
   const supabase = createBrowserClient()
 
   useEffect(() => {
-    if (roleParam === 'poster') {
-      router.push('/dashboard/poster')
-    } else if (roleParam === 'tester') {
-      router.push('/dashboard/tester')
+    const autoAssignRole = async () => {
+      if (roleParam === 'poster' || roleParam === 'tester') {
+        setUpdating(roleParam)
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { error: upsertError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: user.id,
+                role: roleParam,
+                updated_at: new Date().toISOString()
+              })
+            
+            if (upsertError) {
+              console.warn('Auto-role update database warning:', upsertError.message)
+            }
+          }
+          router.push(`/dashboard/${roleParam}`)
+        } catch (err) {
+          console.error('Error auto-assigning role:', err)
+          router.push(`/dashboard/${roleParam}`)
+        } finally {
+          setUpdating(null)
+        }
+      }
     }
-  }, [roleParam, router])
+
+    autoAssignRole()
+  }, [roleParam, router, supabase])
 
   const handleSelectRole = async (role: 'poster' | 'tester') => {
     setUpdating(role)
