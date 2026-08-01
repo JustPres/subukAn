@@ -121,11 +121,6 @@ export async function middleware(request: NextRequest) {
 
   // 3. If user is logged in and accessing dashboard, enforce role separation
   if (user && pathname.startsWith('/dashboard')) {
-    // If accessing the gate page itself, allow
-    if (pathname === '/dashboard' || pathname === '/dashboard/') {
-      return response
-    }
-
     try {
       // Fetch user profile from the database
       const { data: profile, error } = await supabase
@@ -133,6 +128,14 @@ export async function middleware(request: NextRequest) {
         .select('role')
         .eq('id', user.id)
         .single()
+
+      if (pathname === '/dashboard' || pathname === '/dashboard/') {
+        const forceSelect = request.nextUrl.searchParams.get('select') === 'true'
+        if (!forceSelect && profile && (profile.role === 'poster' || profile.role === 'tester')) {
+          return NextResponse.redirect(new URL(`/dashboard/${profile.role}`, request.url))
+        }
+        return response
+      }
 
       if (error || !profile) {
         // If the profiles table is not created yet or fails schema lookup, allow access to requested subroute

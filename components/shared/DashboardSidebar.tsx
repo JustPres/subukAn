@@ -96,7 +96,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
 
         <div className="border-t border-slate/20 p-4 space-y-2">
           <Link 
-            href="/dashboard"
+            href="/dashboard?select=true"
             onClick={() => onToggle(false)}
             className="flex items-center space-x-3 rounded-button px-4 py-3 text-steel hover:bg-slate/20 hover:text-canvas transition-all duration-200"
           >
