@@ -9,7 +9,6 @@ import { DashboardBreadcrumbs } from '@/components/shared/DashboardBreadcrumbs'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const supabase = createBrowserClient()
   const [role, setRole] = useState<'poster' | 'tester' | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -17,9 +16,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const client = createBrowserClient()
+        const { data: { session } } = await client.auth.getSession()
         if (session?.user?.id) {
-          const { data } = await supabase
+          const { data } = await client
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
@@ -43,6 +43,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isGatePage) {
     return <div className="min-h-screen bg-canvas">{children}</div>
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
+        <div className="animate-pulse text-slate">Loading dashboard…</div>
+      </div>
+    )
   }
 
   return (
