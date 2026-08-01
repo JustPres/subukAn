@@ -30,6 +30,7 @@ export function AgreementModal({ title, content, onAccept, onDecline }: Agreemen
         <div 
           ref={contentRef}
           onScroll={handleScroll}
+          data-testid="agreement-modal-content"
           className="p-4 overflow-y-auto flex-1 text-sm text-gray-700 whitespace-pre-wrap"
         >
           {content}

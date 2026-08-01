@@ -20,16 +20,25 @@ function DashboardGateContent() {
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            const { error: updateError } = await supabase
+            // Check if profile exists first
+            const { data: existingProfile } = await supabase
               .from('profiles')
-              .update({
-                role: roleParam,
-                updated_at: new Date().toISOString()
-              })
+              .select('id')
               .eq('id', user.id)
-            
-            if (updateError) {
-              console.warn('Auto-role update failed, attempting insert:', updateError.message)
+              .maybeSingle()
+
+            if (existingProfile) {
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                  role: roleParam,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id)
+              if (updateError) {
+                console.error('Auto-role update failed:', updateError.message)
+              }
+            } else {
               const { error: insertError } = await supabase
                 .from('profiles')
                 .insert({
@@ -62,16 +71,25 @@ function DashboardGateContent() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { error: updateError } = await supabase
+        // Check if profile exists first
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .update({
-            role: role,
-            updated_at: new Date().toISOString()
-          })
+          .select('id')
           .eq('id', user.id)
-        
-        if (updateError) {
-          console.warn('Role update failed, attempting insert:', updateError.message)
+          .maybeSingle()
+
+        if (existingProfile) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              role: role,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id)
+          if (updateError) {
+            console.error('Role update failed:', updateError.message)
+          }
+        } else {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({

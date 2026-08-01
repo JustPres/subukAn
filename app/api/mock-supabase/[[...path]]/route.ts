@@ -466,6 +466,24 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
     }
   }
 
+  // 2. REST profiles update
+  if (path === 'rest/v1/profiles') {
+    const idParam = url.searchParams.get('id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const profile = db.profiles.get(id);
+      if (profile) {
+        const updated: MockProfile = {
+          ...profile,
+          ...body,
+          updated_at: new Date().toISOString(),
+        };
+        db.profiles.set(id, updated);
+        return NextResponse.json(getResponsePayload(updated, prefersObject));
+      }
+    }
+  }
+
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });
 }
 

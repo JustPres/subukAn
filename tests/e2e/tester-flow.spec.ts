@@ -42,7 +42,7 @@ test.describe('Tester Flow E2E', () => {
     await expect(page.locator('text=Acknowledge Testing Guidelines')).toBeVisible();
 
     // Scroll to bottom of the Agreement modal to enable the Accept button
-    const ndaScroll = page.locator('.overflow-y-auto.flex-1');
+    const ndaScroll = page.locator('[data-testid="agreement-modal-content"]');
     await ndaScroll.evaluate(async (el) => {
       el.scrollTop = el.scrollHeight;
       el.dispatchEvent(new Event('scroll'));
