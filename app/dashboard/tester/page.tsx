@@ -127,6 +127,13 @@ export default function TesterDashboard() {
   const [recordingUploaded, setRecordingUploaded] = useState(false)
   const [imageUploaded, setImageUploaded] = useState(false)
 
+  // Payout states
+  const [showPayoutModal, setShowPayoutModal] = useState(false)
+  const [payoutLoading, setPayoutLoading] = useState(false)
+  const [payoutError, setPayoutError] = useState<string | null>(null)
+  const [payoutSuccess, setPayoutSuccess] = useState(false)
+  const [payoutGcashNumber, setPayoutGcashNumber] = useState('')
+
   // Demo panel toggle state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [profileAge, setProfileAge] = useState('')
@@ -301,6 +308,43 @@ export default function TesterDashboard() {
     setImageUploaded(true)
   }
 
+  const handleRequestPayout = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPayoutError(null)
+    setPayoutSuccess(false)
+    
+    // Validate GCash format (11 digits, starts with 09)
+    const gcashRegex = /^09\d{9}$/
+    if (!gcashRegex.test(payoutGcashNumber)) {
+      setPayoutError('Invalid GCash number. Must be 11 digits starting with 09 (e.g. 09171234567).')
+      return
+    }
+
+    setPayoutLoading(true)
+    try {
+      const response = await fetch('/api/payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: totalEarnings, gcash_number: payoutGcashNumber })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to request payout')
+      }
+
+      setPayoutSuccess(true)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setPayoutError(err.message)
+      } else {
+        setPayoutError('An unexpected error occurred.')
+      }
+    } finally {
+      setPayoutLoading(false)
+    }
+  }
+
   // Submit validation: is answer long enough? is recording ready if required? is image uploaded if required? is rating set?
   const isFormValid = () => {
     if (!selectedJob) return false
@@ -407,6 +451,7 @@ export default function TesterDashboard() {
                 <h3 className="font-bold text-gray-900 mb-1">Total Verified Earnings</h3>
                 <span className="text-2xl font-black text-gray-900 block">₱{totalEarnings.toFixed(2)}</span>
                 <button 
+                  onClick={() => setShowPayoutModal(true)}
                   disabled={totalEarnings === 0}
                   className="mt-2 text-xs font-semibold text-emerald-600 hover:text-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -888,6 +933,91 @@ export default function TesterDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payout Modal */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[12px] w-full max-w-md shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="font-extrabold text-lg flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-emerald-600" /> GCash Payout
+              </h3>
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowPayoutModal(false)
+                  setPayoutSuccess(false)
+                  setPayoutError(null)
+                  setPayoutGcashNumber('')
+                }}
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {payoutSuccess ? (
+                <div className="text-center space-y-3 py-4">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-bold text-gray-900">Payout Requested!</h4>
+                  <p className="text-sm text-gray-500">Your earnings have been successfully requested via GCash.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleRequestPayout} className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-[8px] flex justify-between items-center border border-gray-100">
+                    <span className="text-sm font-semibold text-gray-600">Available Balance</span>
+                    <span className="text-lg font-black text-emerald-600">₱{totalEarnings.toFixed(2)}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">GCash Mobile Number</label>
+                    <input
+                      type="text"
+                      required
+                      value={payoutGcashNumber}
+                      onChange={e => setPayoutGcashNumber(e.target.value)}
+                      placeholder="09XXXXXXXXX"
+                      className="w-full p-2.5 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1.5">Enter 11-digit Philippine mobile number.</p>
+                  </div>
+
+                  {payoutError && (
+                    <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-[8px] flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{payoutError}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPayoutModal(false)
+                        setPayoutError(null)
+                        setPayoutGcashNumber('')
+                      }}
+                      className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-sm font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={payoutLoading}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-[8px] text-sm font-semibold shadow-sm flex items-center gap-2"
+                    >
+                      {payoutLoading ? 'Processing...' : 'Confirm Payout'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

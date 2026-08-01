@@ -59,7 +59,15 @@ export default function LoginPage() {
         setError(signInError.message)
         setLoading(null)
       } else {
-        window.location.href = '/dashboard'
+        let redirectTo = '/dashboard'
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search)
+          const redirectedFrom = params.get('redirectedFrom')
+          if (redirectedFrom && redirectedFrom.startsWith('/')) {
+            redirectTo = redirectedFrom
+          }
+        }
+        window.location.href = redirectTo
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'An unexpected error occurred during sign in.'

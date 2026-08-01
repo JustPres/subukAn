@@ -18,13 +18,13 @@ export default function Home() {
           </nav>
           <div className="flex items-center space-x-3">
             <Link 
-              href="/tester/dashboard" 
+              href="/dashboard/tester" 
               className="px-4 py-2 border border-steel text-sm font-semibold rounded-button text-slate hover:text-ink hover:bg-canvas transition-all"
             >
               Tester Portal
             </Link>
             <Link 
-              href="/poster/dashboard" 
+              href="/dashboard/poster" 
               className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-button shadow-sm transition-all"
             >
               Post a Test
@@ -50,7 +50,7 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 
-              href="/poster/dashboard" 
+              href="/dashboard/poster" 
               className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-base transition-all flex items-center justify-center space-x-2"
             >
               <span>Build & Deploy Tests</span>
@@ -59,7 +59,7 @@ export default function Home() {
               </svg>
             </Link>
             <Link 
-              href="/tester/dashboard" 
+              href="/dashboard/tester" 
               className="w-full sm:w-auto px-8 py-4 border border-steel hover:border-slate text-ink bg-white font-bold rounded-button text-base transition-all hover:bg-canvas flex items-center justify-center space-x-2"
             >
               <span>Become a Tester</span>
@@ -148,7 +148,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/poster/dashboard?tier=micro" 
+                href="/dashboard/poster?tier=micro" 
                 className="w-full text-center py-3 bg-white border border-steel hover:border-slate text-ink rounded-button text-sm font-bold transition-all hover:bg-canvas"
               >
                 Create Micro Test
@@ -181,7 +181,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/poster/dashboard?tier=functional" 
+                href="/dashboard/poster?tier=functional" 
                 className="w-full text-center py-3 bg-primary hover:bg-primary-hover text-white rounded-button text-sm font-bold transition-all shadow-sm"
               >
                 Create Functional Test
@@ -214,7 +214,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/poster/dashboard?tier=audit" 
+                href="/dashboard/poster?tier=audit" 
                 className="w-full text-center py-3 bg-white border border-steel hover:border-slate text-ink rounded-button text-sm font-bold transition-all hover:bg-canvas"
               >
                 Request Deep Audit
@@ -370,8 +370,8 @@ export default function Home() {
             <span>&copy; {new Date().getFullYear()}</span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
-            <Link href="/poster/dashboard" className="hover:text-ink transition-colors">Poster Dashboard</Link>
-            <Link href="/tester/dashboard" className="hover:text-ink transition-colors">Tester Dashboard</Link>
+            <Link href="/dashboard/poster" className="hover:text-ink transition-colors">Poster Dashboard</Link>
+            <Link href="/dashboard/tester" className="hover:text-ink transition-colors">Tester Dashboard</Link>
             <Link href="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
           </div>

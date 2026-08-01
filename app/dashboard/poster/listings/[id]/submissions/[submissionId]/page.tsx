@@ -598,10 +598,10 @@ export default function SubmissionReviewPage({ params }: PageProps) {
           <p className="text-rose-700 text-sm">{error || 'The requested resource could not be found.'}</p>
           <div className="pt-2">
             <Link
-              href="/dashboard/poster"
+              href={`/dashboard/poster/listings/${id}`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-[8px] text-sm font-semibold hover:bg-gray-50 text-gray-700"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+              <ArrowLeft className="w-4 h-4" /> Back to Listing
             </Link>
           </div>
         </div>
@@ -612,8 +612,8 @@ export default function SubmissionReviewPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-8 max-w-6xl mx-auto">
       {/* Back link */}
-      <Link href="/dashboard/poster" className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-900 mb-6 text-sm font-medium transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+      <Link href={`/dashboard/poster/listings/${id}`} className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-900 mb-6 text-sm font-medium transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Back to Listing
       </Link>
 
       {/* Header */}
