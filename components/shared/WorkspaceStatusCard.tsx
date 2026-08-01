@@ -1,28 +1,73 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, XCircle, Clock, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, ShieldAlert, Scale } from 'lucide-react'
 import { getWorkspaceStatusInfo } from '@/lib/utils/workspace-status'
+import { DisputeModal } from '@/components/shared/DisputeModal'
+import { createBrowserClient } from '@/lib/supabase/client'
 
 interface WorkspaceStatusCardProps {
   submission: {
+    id?: string;
     status: string;
     rejection_reason?: string | null;
     rejection_category?: string | null;
     rejection_explanation?: string | null;
+    dispute_reason?: string | null;
+    dispute_explanation?: string | null;
     review_completed_at?: string | null;
     auto_release_at?: string | null;
     poster_feedback?: string | null;
   } | null;
   listing?: {
+    title?: string;
     rate_per_tester?: number;
     review_window_minutes?: number;
   } | null;
+  onDisputeSubmitted?: (reason: string, explanation: string) => void;
 }
 
-export function WorkspaceStatusCard({ submission, listing }: WorkspaceStatusCardProps) {
-  const statusInfo = getWorkspaceStatusInfo(submission, listing);
+export function WorkspaceStatusCard({ submission, listing, onDisputeSubmitted }: WorkspaceStatusCardProps) {
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false)
+  const [localSubmission, setLocalSubmission] = useState(submission)
+
+  const currentSub = localSubmission || submission
+  const statusInfo = getWorkspaceStatusInfo(currentSub, listing);
+  const supabase = createBrowserClient()
+
+  const handleDisputeSubmit = async (reason: string, explanation: string) => {
+    if (!currentSub?.id) return
+
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .update({
+          status: 'disputed',
+          dispute_reason: reason,
+          dispute_explanation: explanation
+        })
+        .eq('id', currentSub.id)
+
+      if (error && !error.message?.includes('schema cache')) {
+        throw error
+      }
+
+      setLocalSubmission(prev => prev ? {
+        ...prev,
+        status: 'disputed',
+        dispute_reason: reason,
+        dispute_explanation: explanation
+      } : null)
+
+      if (onDisputeSubmitted) {
+        onDisputeSubmitted(reason, explanation)
+      }
+    } catch (e) {
+      console.error('Failed to submit dispute:', e)
+      throw e
+    }
+  }
 
   if (statusInfo.status === 'approved') {
     return (
@@ -70,15 +115,15 @@ export function WorkspaceStatusCard({ submission, listing }: WorkspaceStatusCard
     );
   }
 
-  if (statusInfo.status === 'rejected') {
+  if (statusInfo.status === 'disputed') {
     return (
-      <div className="bg-white border border-rose-200 rounded-[12px] p-6 shadow-sm space-y-5 animate-fadeIn">
-        <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto border border-rose-100">
-          <XCircle className="w-7 h-7 text-rose-600" />
+      <div className="bg-white border border-amber-300 rounded-[12px] p-6 shadow-sm space-y-5 animate-fadeIn">
+        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-200">
+          <Scale className="w-7 h-7 text-amber-600" />
         </div>
         <div className="text-center">
-          <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-rose-100 text-rose-800 uppercase tracking-wider inline-block mb-2">
-            ❌ Submission Rejected
+          <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-amber-100 text-amber-900 uppercase tracking-wider inline-block mb-2">
+            ⚖️ Dispute Under Review
           </span>
           <h2 className="text-xl font-black text-gray-900">{statusInfo.title}</h2>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -86,47 +131,31 @@ export function WorkspaceStatusCard({ submission, listing }: WorkspaceStatusCard
           </p>
         </div>
 
-        {/* Rejection Category Pill */}
-        <div className="bg-rose-50/70 border border-rose-200 rounded-[8px] p-3 text-xs text-left">
-          <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block mb-0.5">
-            Rejection Category
-          </span>
-          <span className="font-extrabold text-rose-900 text-sm">
-            {statusInfo.rejectionReasonLabel}
-          </span>
-        </div>
-
-        {/* Poster Rejection Explanation */}
-        {statusInfo.rejectionExplanation ? (
-          <div className="bg-rose-50/90 border-l-4 border-rose-500 p-3.5 rounded-r-[8px] text-left break-words">
-            <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">
-              Poster&apos;s Explanation:
+        {statusInfo.disputeReasonLabel && (
+          <div className="bg-amber-50/70 border border-amber-200 rounded-[8px] p-3 text-xs text-left">
+            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block mb-0.5">
+              Tester Rationale Category
             </span>
-            <p className="text-xs text-rose-950 font-medium italic leading-relaxed whitespace-pre-wrap">
-              &quot;{statusInfo.rejectionExplanation}&quot;
+            <span className="font-extrabold text-amber-950 text-sm">
+              {statusInfo.disputeReasonLabel}
+            </span>
+          </div>
+        )}
+
+        {statusInfo.disputeExplanation && (
+          <div className="bg-amber-50/90 border-l-4 border-amber-500 p-3.5 rounded-r-[8px] text-left break-words">
+            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block mb-1">
+              Your Dispute Explanation:
+            </span>
+            <p className="text-xs text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">
+              &quot;{statusInfo.disputeExplanation}&quot;
             </p>
           </div>
-        ) : (
-          <div className="bg-rose-50/50 border border-rose-100 p-3 rounded-[8px] text-left">
-            <p className="text-xs text-rose-800 italic">No detailed explanation was provided by the poster.</p>
-          </div>
         )}
 
-        {statusInfo.reviewCompletedAt && (
-          <div className="text-[10px] text-gray-400 font-semibold text-center">
-            Reviewed at: {new Date(statusInfo.reviewCompletedAt).toLocaleString()}
-          </div>
-        )}
-
-        {/* Support & Dispute Guidance */}
-        <div className="bg-gray-50 border border-gray-200 rounded-[8px] p-3 text-[11px] text-gray-600 leading-relaxed text-left space-y-1">
-          <div className="flex items-center gap-1.5 font-bold text-gray-800">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-            <span>Support & Dispute Guidance</span>
-          </div>
-          <p>
-            If you believe this rejection was unjustified, you can post a message in the debrief thread on the right to resolve misunderstandings or request re-evaluation with the poster.
-          </p>
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-[8px] text-center">
+          <span className="text-xs text-amber-700 block font-semibold">Escrow Status</span>
+          <span className="text-lg font-black text-amber-800">{statusInfo.escrowOrPayoutText}</span>
         </div>
 
         <Link
@@ -136,6 +165,99 @@ export function WorkspaceStatusCard({ submission, listing }: WorkspaceStatusCard
           Return to Dashboard
         </Link>
       </div>
+    );
+  }
+
+  if (statusInfo.status === 'rejected') {
+    return (
+      <>
+        <div className="bg-white border border-rose-200 rounded-[12px] p-6 shadow-sm space-y-5 animate-fadeIn">
+          <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto border border-rose-100">
+            <XCircle className="w-7 h-7 text-rose-600" />
+          </div>
+          <div className="text-center">
+            <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-rose-100 text-rose-800 uppercase tracking-wider inline-block mb-2">
+              ❌ Submission Rejected
+            </span>
+            <h2 className="text-xl font-black text-gray-900">{statusInfo.title}</h2>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              {statusInfo.subtitle}
+            </p>
+          </div>
+
+          {/* Rejection Category Pill */}
+          <div className="bg-rose-50/70 border border-rose-200 rounded-[8px] p-3 text-xs text-left">
+            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block mb-0.5">
+              Rejection Category
+            </span>
+            <span className="font-extrabold text-rose-900 text-sm">
+              {statusInfo.rejectionReasonLabel}
+            </span>
+          </div>
+
+          {/* Poster Rejection Explanation */}
+          {statusInfo.rejectionExplanation ? (
+            <div className="bg-rose-50/90 border-l-4 border-rose-500 p-3.5 rounded-r-[8px] text-left break-words">
+              <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">
+                Poster&apos;s Explanation:
+              </span>
+              <p className="text-xs text-rose-950 font-medium italic leading-relaxed whitespace-pre-wrap">
+                &quot;{statusInfo.rejectionExplanation}&quot;
+              </p>
+            </div>
+          ) : (
+            <div className="bg-rose-50/50 border border-rose-100 p-3 rounded-[8px] text-left">
+              <p className="text-xs text-rose-800 italic">No detailed explanation was provided by the poster.</p>
+            </div>
+          )}
+
+          {statusInfo.reviewCompletedAt && (
+            <div className="text-[10px] text-gray-400 font-semibold text-center">
+              Reviewed at: {new Date(statusInfo.reviewCompletedAt).toLocaleString()}
+            </div>
+          )}
+
+          {/* Dispute Action Trigger Button */}
+          <div className="pt-2 space-y-2">
+            <button
+              type="button"
+              onClick={() => setIsDisputeModalOpen(true)}
+              className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-[8px] text-xs shadow-sm transition-all flex items-center justify-center gap-1.5"
+            >
+              <ShieldAlert className="w-4 h-4" /> Submit Rejection Dispute
+            </button>
+
+            {/* Support & Dispute Guidance */}
+            <div className="bg-gray-50 border border-gray-200 rounded-[8px] p-3 text-[11px] text-gray-600 leading-relaxed text-left space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-gray-800">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                <span>Support & Dispute Guidance</span>
+              </div>
+              <p>
+                If you believe this rejection was unjustified, click &quot;Submit Rejection Dispute&quot; above to submit an explanation to subukAn support.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/dashboard/tester"
+            className="block w-full py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-[8px] text-xs shadow-sm transition-all text-center"
+          >
+            Return to Dashboard
+          </Link>
+        </div>
+
+        {/* Dispute Modal */}
+        {currentSub?.id && (
+          <DisputeModal
+            isOpen={isDisputeModalOpen}
+            onClose={() => setIsDisputeModalOpen(false)}
+            submissionId={currentSub.id}
+            listingTitle={listing?.title}
+            onSubmitDispute={handleDisputeSubmit}
+          />
+        )}
+      </>
     );
   }
 

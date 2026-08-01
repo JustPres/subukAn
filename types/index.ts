@@ -23,6 +23,42 @@ export interface DemographicTarget {
   ageGroup?: string | string[];
   employmentStatus?: string | string[];
   techLiteracy?: string | string[];
+  location?: string | string[];
+  device_types?: string | string[];
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'payout_approved' | 'submission_update' | 'new_listing' | 'dispute_update';
+  is_read: boolean;
+  created_at: string;
+  link_url?: string;
+}
+
+export interface NotificationSettings {
+  email_payouts: boolean;
+  email_submissions: boolean;
+  email_listings: boolean;
+  email_disputes: boolean;
+}
+
+export interface UserProfile {
+  id: string;
+  role: 'poster' | 'tester';
+  full_name?: string;
+  age_group?: string | null;
+  gender?: string | null;
+  employment_status?: string | null;
+  tech_literacy?: string | null;
+  accessibility_tags?: string[];
+  location?: string | null;
+  device_types?: string[] | string | null;
+  notification_settings?: NotificationSettings;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface QuickImpressionTask {
@@ -40,3 +76,4 @@ export interface QuickImpressionTask {
   recallQuestion?: string;
   question_text?: string;
 }
+

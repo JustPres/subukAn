@@ -6,6 +6,7 @@ import { Menu } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { DashboardSidebar } from '@/components/shared/DashboardSidebar'
 import { DashboardBreadcrumbs } from '@/components/shared/DashboardBreadcrumbs'
+import { NotificationCenter } from '@/components/shared/NotificationCenter'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -62,14 +63,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="lg:hidden flex items-center h-16 px-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
-          <button 
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 -ml-2 text-slate hover:text-ink transition-colors"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="ml-4 font-semibold text-lg">Dashboard</span>
+        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-gray-200 shadow-xs sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-slate hover:text-ink transition-colors"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <span className="font-extrabold text-lg text-gray-900 tracking-tight">subukAn</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <NotificationCenter />
+          </div>
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">

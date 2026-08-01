@@ -19,4 +19,4 @@
 [2026-08-01 15:58:00] Build/Lint/Test Successful - Fixed useCallback ReferenceError, resolved all TS compilation type errors, and integrated user-friendly error overrides in standard and 5-second task workspaces.
 [2026-08-01 17:33:00] Build/Lint/Test Successful - Renamed submission_comments columns (message_text→comment_text, sender_id→user_id), replaced all browser alert() popups with inline UI error labels in comment forms.
 [2026-08-01 18:41:00] Build/Lint/Test Successful - Applied M3 polish fixes: added fallback handling for rate formatting in workspace status utility, added break-words CSS class to poster rejection explanation container, and updated E2E test locator to Submission Under Review.
-
+[2026-08-01 18:55:00] Build/Lint/Test Successful - Fixed NotificationCenter empty array fallback bug, removed hardcoded ₱400 earnings offset in tester dashboard, enhanced Notification trigger accessibility attributes (aria-expanded and aria-haspopup), and expanded unit test suite (95 tests passing).

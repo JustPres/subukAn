@@ -101,6 +101,26 @@ describe('Workspace Status Utility & Formatting', () => {
       expect(info.autoReleaseAt).toBe('2026-08-01T16:00:00Z');
     });
 
+    it('returns disputed status metadata with dispute reason and rationale', () => {
+      const mockSubmission = {
+        status: 'disputed',
+        rejection_reason: 'instructions_not_followed',
+        rejection_explanation: 'Video recording missed step 3.',
+        dispute_reason: 'followed_instructions',
+        dispute_explanation: 'I recorded step 3 between 0:45 and 1:15 in the video.',
+        review_completed_at: '2026-08-01T15:00:00Z',
+      };
+
+      const info = getWorkspaceStatusInfo(mockSubmission, mockListing);
+
+      expect(info.status).toBe('disputed');
+      expect(info.badgeTheme).toBe('amber');
+      expect(info.title).toBe('Dispute Under Review');
+      expect(info.disputeReasonLabel).toBe('Followed All Instructions');
+      expect(info.disputeExplanation).toBe('I recorded step 3 between 0:45 and 1:15 in the video.');
+      expect(info.escrowOrPayoutText).toBe('₱150.00 Held Pending Dispute');
+    });
+
     it('handles fallback submitted status as pending_review', () => {
       const mockSubmission = {
         status: 'submitted',

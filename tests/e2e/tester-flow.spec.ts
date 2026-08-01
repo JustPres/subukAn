@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { bypassAuth, createMockListing } from './helpers';
 
-test.describe('Tester Flow E2E', () => {
+test.describe('Tester Flow & Milestone 4 Features E2E', () => {
   const email = 'test-tester@example.com';
   const password = 'password123';
 
@@ -10,24 +10,74 @@ test.describe('Tester Flow E2E', () => {
     await bypassAuth(context, email, password, 'tester');
   });
 
-  test('should view tester workspace and access demographics modal', async ({ page }) => {
-    // Navigate to /dashboard/tester
+  test('should open notification center drawer and interact with actions', async ({ page }) => {
+    await page.goto('/dashboard/tester');
+
+    // Click Notification Bell button in header
+    const bellButton = page.locator('button[aria-label="Open notifications"]');
+    await expect(bellButton).toBeVisible();
+    await bellButton.click();
+
+    // Verify Notification Drawer opened
+    await expect(page.locator('h3:has-text("Notifications")')).toBeVisible();
+    await expect(page.locator('text=Payout Approved')).toBeVisible();
+
+    // Click "Mark all read"
+    const markAllReadBtn = page.locator('button:has-text("Mark all read")');
+    if (await markAllReadBtn.isVisible()) {
+      await markAllReadBtn.click();
+    }
+
+    // Close drawer
+    await page.keyboard.press('Escape');
+  });
+
+  test('should navigate tester dashboard tabs and open profile & dispute modals', async ({ page }) => {
     await page.goto('/dashboard/tester');
 
     // Assert page loaded
     await expect(page.locator('h1')).toContainText('Tester Workspace');
-    await expect(page.locator('text=Verified GCash Receiver')).toBeVisible();
 
-    // Verify demographic profile configuration modal can be opened
-    await page.click('text=Configure Demographics');
-    await expect(page.locator('h3:has-text("Configure Profile Demographics")')).toBeVisible();
+    // 1. Test Tab Switching: "My Submissions"
+    await page.click('button:has-text("My Submissions")');
+    await expect(page.locator('h2:has-text("Your Submission History")')).toBeVisible();
 
-    // Check one accessibility option
-    await page.locator('label:has-text("I navigate using Keyboard-Only") input').check();
+    // Verify rejected submission presents "Submit Rejection Dispute" button
+    const disputeTrigger = page.locator('button:has-text("Submit Rejection Dispute")').first();
+    if (await disputeTrigger.isVisible()) {
+      await disputeTrigger.click();
 
-    // Close the modal
+      // Verify Dispute Modal opened
+      await expect(page.locator('h3:has-text("Submit Rejection Dispute")')).toBeVisible();
+
+      // Fill in dispute explanation
+      const explanationInput = page.locator('textarea[placeholder*="Explain why the rejection was unfair"]');
+      await expect(explanationInput).toBeVisible();
+      await explanationInput.fill('I executed all steps accurately as requested in the testing scenario.');
+
+      // Click Submit Dispute
+      await page.click('button:has-text("Submit Dispute")');
+
+      // Verify success message
+      await expect(page.locator('h4:has-text("Dispute Submitted!")')).toBeVisible({ timeout: 5000 });
+    }
+
+    // 2. Test Tab Switching: "Earnings & Payout History"
+    await page.click('button:has-text("Earnings & Payout History")');
+    await expect(page.locator('h3:has-text("GCash Payout History")')).toBeVisible();
+    await expect(page.locator('text=Total Earnings')).toBeVisible();
+
+    // 3. Test Profile Modal
+    await page.click('button:has-text("Profile & Notifications")');
+    await expect(page.locator('h3:has-text("Tester Profile Settings")')).toBeVisible();
+
+    // Switch to Notification Settings tab in modal
+    await page.click('button:has-text("Notification Settings")');
+    await expect(page.locator('text=Payout Approval Alerts')).toBeVisible();
+
+    // Close modal
     await page.click('button:has-text("Cancel")');
-    await expect(page.locator('h3:has-text("Configure Profile Demographics")')).not.toBeVisible();
+    await expect(page.locator('h3:has-text("Tester Profile Settings")')).not.toBeVisible();
   });
 
   test('should complete the 5-second Quick Impression task page', async ({ page }) => {

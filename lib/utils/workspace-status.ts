@@ -5,6 +5,13 @@ export const REJECTION_REASON_LABELS: Record<string, string> = {
   low_effort: 'Low Effort / Quality Issues',
 };
 
+export const DISPUTE_REASON_LABELS: Record<string, string> = {
+  followed_instructions: 'Followed All Instructions',
+  valid_evidence: 'Media Evidence Valid & Clear',
+  poster_error: 'Poster Feedback Inaccurate',
+  other: 'Other Dispute Reason',
+};
+
 /**
  * Formats a rejection reason code or category string into a human-readable label.
  */
@@ -13,14 +20,24 @@ export function formatRejectionReason(reason?: string | null): string {
   if (REJECTION_REASON_LABELS[reason]) {
     return REJECTION_REASON_LABELS[reason];
   }
-  // Convert snake_case or raw string to Title Case if not in dictionary
   return reason
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
 
-export type SubmissionStatus = 'in_progress' | 'pending_review' | 'approved' | 'rejected' | 'expired' | 'submitted';
+export function formatDisputeReason(reason?: string | null): string {
+  if (!reason) return 'Dispute Under Review';
+  if (DISPUTE_REASON_LABELS[reason]) {
+    return DISPUTE_REASON_LABELS[reason];
+  }
+  return reason
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export type SubmissionStatus = 'in_progress' | 'pending_review' | 'approved' | 'rejected' | 'disputed' | 'expired' | 'submitted';
 
 export interface WorkspaceStatusInfo {
   status: SubmissionStatus;
@@ -31,6 +48,8 @@ export interface WorkspaceStatusInfo {
   escrowOrPayoutText: string;
   rejectionReasonLabel?: string;
   rejectionExplanation?: string | null;
+  disputeReasonLabel?: string;
+  disputeExplanation?: string | null;
   reviewCompletedAt?: string | null;
   autoReleaseAt?: string | null;
   posterFeedback?: string | null;
@@ -45,6 +64,8 @@ export function getWorkspaceStatusInfo(
     rejection_reason?: string | null;
     rejection_category?: string | null;
     rejection_explanation?: string | null;
+    dispute_reason?: string | null;
+    dispute_explanation?: string | null;
     review_completed_at?: string | null;
     auto_release_at?: string | null;
     poster_feedback?: string | null;
@@ -68,6 +89,22 @@ export function getWorkspaceStatusInfo(
       escrowOrPayoutText: `+₱${rate} Credited to Earnings`,
       reviewCompletedAt: submission?.review_completed_at || null,
       posterFeedback: submission?.poster_feedback || null,
+    };
+  }
+
+  if (currentStatus === 'disputed') {
+    return {
+      status: 'disputed',
+      badgeLabel: 'Disputed',
+      badgeTheme: 'amber',
+      title: 'Dispute Under Review',
+      subtitle: 'You have submitted a dispute for this rejection. Our support team is reviewing your claim.',
+      escrowOrPayoutText: `₱${rate} Held Pending Dispute`,
+      disputeReasonLabel: formatDisputeReason(submission?.dispute_reason),
+      disputeExplanation: submission?.dispute_explanation || null,
+      rejectionReasonLabel: formatRejectionReason(rawReason),
+      rejectionExplanation: submission?.rejection_explanation || null,
+      reviewCompletedAt: submission?.review_completed_at || null,
     };
   }
 
@@ -96,3 +133,4 @@ export function getWorkspaceStatusInfo(
     autoReleaseAt: submission?.auto_release_at || null,
   };
 }
+

@@ -86,6 +86,17 @@ interface MockComment {
   created_at: string;
 }
 
+interface MockNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  link_url?: string;
+  created_at: string;
+}
+
 interface MockDb {
   users: Map<string, MockUser>;
   profiles: Map<string, MockProfile>;
@@ -94,6 +105,7 @@ interface MockDb {
   submissions: Map<string, MockSubmission>;
   taskResponses: Map<string, MockTaskResponse>;
   submissionComments: Map<string, MockComment>;
+  notifications: Map<string, MockNotification>;
 }
 
 const globalRef = globalThis as typeof globalThis & { mockDb?: MockDb };
@@ -106,6 +118,7 @@ if (!globalRef.mockDb) {
     submissions: new Map<string, MockSubmission>(),
     taskResponses: new Map<string, MockTaskResponse>(),
     submissionComments: new Map<string, MockComment>(),
+    notifications: new Map<string, MockNotification>(),
   };
 }
 const db = globalRef.mockDb;
@@ -280,6 +293,18 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
     return NextResponse.json(getResponsePayload(commentsWithProfiles, prefersObject));
   }
 
+  // 9. REST notifications
+  if (path === 'rest/v1/notifications') {
+    const userIdParam = url.searchParams.get('user_id');
+    let list = Array.from(db.notifications.values());
+    if (userIdParam && userIdParam.startsWith('eq.')) {
+      const uId = userIdParam.substring(3);
+      list = list.filter(n => n.user_id === uId);
+    }
+    list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return NextResponse.json(getResponsePayload(list, prefersObject));
+  }
+
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });
 }
 
@@ -440,6 +465,23 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
     return NextResponse.json(getResponsePayload(comment, prefersObject));
   }
 
+  // 9. REST notifications insert
+  if (path === 'rest/v1/notifications') {
+    const notifId = body.id || `notif_${Math.random().toString(36).substring(2, 12)}`;
+    const notif: MockNotification = {
+      id: notifId,
+      user_id: String(body.user_id || ''),
+      title: String(body.title || ''),
+      message: String(body.message || ''),
+      type: String(body.type || 'submission_update'),
+      is_read: Boolean(body.is_read || false),
+      link_url: body.link_url ? String(body.link_url) : undefined,
+      created_at: new Date().toISOString(),
+    };
+    db.notifications.set(notifId, notif);
+    return NextResponse.json(getResponsePayload(notif, prefersObject));
+  }
+
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });
 }
 
@@ -486,6 +528,32 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
     }
   }
 
+  // 3. REST notifications update
+  if (path === 'rest/v1/notifications') {
+    const idParam = url.searchParams.get('id');
+    const userIdParam = url.searchParams.get('user_id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const notif = db.notifications.get(id);
+      if (notif) {
+        const updated: MockNotification = {
+          ...notif,
+          ...body,
+        };
+        db.notifications.set(id, updated);
+        return NextResponse.json(getResponsePayload(updated, prefersObject));
+      }
+    } else if (userIdParam && userIdParam.startsWith('eq.')) {
+      const uId = userIdParam.substring(3);
+      db.notifications.forEach((n, id) => {
+        if (n.user_id === uId) {
+          db.notifications.set(id, { ...n, ...body });
+        }
+      });
+      return NextResponse.json([]);
+    }
+  }
+
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });
 }
 
@@ -504,6 +572,23 @@ export async function DELETE(request: NextRequest, { params }: { params: { path?
       db.listings.forEach((listing, id) => {
         if (listing.title === title) {
           db.listings.delete(id);
+        }
+      });
+    }
+    return new NextResponse(null, { status: 204 });
+  }
+
+  if (path === 'rest/v1/notifications') {
+    const idParam = url.searchParams.get('id');
+    const userIdParam = url.searchParams.get('user_id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      db.notifications.delete(id);
+    } else if (userIdParam && userIdParam.startsWith('eq.')) {
+      const uId = userIdParam.substring(3);
+      db.notifications.forEach((n, id) => {
+        if (n.user_id === uId) {
+          db.notifications.delete(id);
         }
       });
     }

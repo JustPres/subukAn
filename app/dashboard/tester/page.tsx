@@ -15,63 +15,97 @@ import {
   Square,
   UploadCloud,
   Check,
-  AlertCircle
+  AlertCircle,
+  Clock,
+  ShieldAlert,
+  FileText,
+  DollarSign,
+  LayoutDashboard,
+  CheckSquare,
+  Scale
 } from 'lucide-react'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
+import { ProfileModal } from '@/components/shared/ProfileModal'
+import { DisputeModal } from '@/components/shared/DisputeModal'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import { JobListing, ButtonConfig, getButtonConfig } from '@/lib/utils/claim-button'
+import { formatRejectionReason, formatDisputeReason } from '@/lib/utils/workspace-status'
+import { UserProfile } from '@/types'
 
-const AVAILABLE_JOBS: JobListing[] = [
+export interface SubmissionRecord {
+  id: string
+  listing_id: string
+  listing_title: string
+  rate_per_tester: number
+  status: 'in_progress' | 'pending_review' | 'approved' | 'rejected' | 'disputed' | 'expired'
+  rejection_reason?: string | null
+  rejection_explanation?: string | null
+  dispute_reason?: string | null
+  dispute_explanation?: string | null
+  submitted_at?: string | null
+  created_at: string
+}
+
+export interface PayoutRecord {
+  id: string
+  reference_id: string
+  amount: number
+  gcash_number: string
+  status: 'completed' | 'processing' | 'pending'
+  created_at: string
+}
+
+const DEFAULT_SUBMISSIONS: SubmissionRecord[] = [
   {
-    id: 'j1',
-    title: 'E-Commerce App GCash Checkout Test',
-    description: 'Perform a checkout test using a staging payment link. Record the transition screen and verify the payment status updates.',
+    id: 'sub_1',
+    listing_id: 'j1',
+    listing_title: 'E-Commerce App GCash Checkout Test',
     rate_per_tester: 200,
-    slots_count: 5,
-    slots_filled: 3, // 2 slots left
-    requires_recording: true,
-    requires_image: true,
-    question_text: 'Did the checkout screen display the correct GCash prompt? Describe any delays.',
-    is_quick_impression: false
+    status: 'approved',
+    submitted_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString()
   },
   {
-    id: 'j2',
-    title: 'Rider Delivery App Pin Accuracy Verification',
-    description: 'Verify pin locator and map loading efficiency on Android devices in urban zones.',
+    id: 'sub_2',
+    listing_id: 'j2',
+    listing_title: 'Rider Delivery App Pin Accuracy Verification',
     rate_per_tester: 500,
-    slots_count: 10,
-    slots_filled: 10, // 0 slots left (should be unclickable)
-    requires_recording: true,
-    requires_image: false,
-    question_text: 'Did the GPS pin lock onto your location accurately within 5 seconds?',
-    is_quick_impression: false
+    status: 'rejected',
+    rejection_reason: 'instructions_not_followed',
+    rejection_explanation: 'The GPS pin locator screenshot was blurry and did not show exact coordinates.',
+    submitted_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 50).toISOString()
   },
   {
-    id: 'j3',
-    title: 'Sari-Sari Store Inventory App Initial Run',
-    description: 'Perform basic barcode scanning and item adding scenarios. Record any app crashes.',
+    id: 'sub_3',
+    listing_id: 'j3',
+    listing_title: 'Sari-Sari Store Inventory App Initial Run',
     rate_per_tester: 50,
-    slots_count: 3,
-    slots_filled: 0, // 3 slots left
-    requires_recording: false,
-    requires_image: true,
-    question_text: 'Did the camera scanner detect barcodes automatically without manual focus?',
-    is_quick_impression: false
+    status: 'pending_review',
+    submitted_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString()
+  }
+]
+
+const DEFAULT_PAYOUTS: PayoutRecord[] = [
+  {
+    id: 'p_1',
+    reference_id: 'PAY-GCASH-9821',
+    amount: 200,
+    gcash_number: '0917-***-5678',
+    status: 'completed',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString()
   },
   {
-    id: 'j4',
-    title: 'LRT Ticket Booking Mobile Flow Review',
-    description: 'Check navigation lag and ticketing screen responsiveness on multiple Android models.',
-    rate_per_tester: 100,
-    slots_count: 1,
-    slots_filled: 1, // 0 slots left (should be unclickable)
-    requires_recording: true,
-    requires_image: true,
-    question_text: 'Describe any responsiveness glitches or slow rendering times on button clicks.',
-    is_quick_impression: false
+    id: 'p_2',
+    reference_id: 'PAY-GCASH-4412',
+    amount: 200,
+    gcash_number: '0917-***-5678',
+    status: 'completed',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString()
   }
 ]
 
@@ -92,16 +126,21 @@ Scroll down and review all terms to accept.`
 export default function TesterDashboard() {
   const supabase = createBrowserClient()
 
-  // Profiles states
-  const [totalEarnings, setTotalEarnings] = useState(400)
+  // Navigation tab state: 'available' | 'submissions' | 'earnings'
+  const [activeTab, setActiveTab] = useState<'available' | 'submissions' | 'earnings'>('available')
+
+  // Profile and earnings states
+  const [totalEarnings, setTotalEarnings] = useState(0)
+  const [withdrawableBalance, setWithdrawableBalance] = useState(0)
   const [gcashNumber, setGcashNumber] = useState('0917-***-5678')
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Partial<UserProfile> | null>(null)
   const [listings, setListings] = useState<JobListing[]>([])
+  const [submissions, setSubmissions] = useState<SubmissionRecord[]>(DEFAULT_SUBMISSIONS)
+  const [payouts, setPayouts] = useState<PayoutRecord[]>(DEFAULT_PAYOUTS)
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
   
-  // Interactive UI state machine
-  // 'idle' -> 'agreement' -> 'active_task' -> 'submitted'
+  // Interactive UI state machine for standard workspace inline task demo
   const [currentStep, setCurrentStep] = useState<'idle' | 'agreement' | 'active_task' | 'submitted'>('idle')
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null)
   
@@ -119,13 +158,40 @@ export default function TesterDashboard() {
   const [payoutSuccess, setPayoutSuccess] = useState(false)
   const [payoutGcashNumber, setPayoutGcashNumber] = useState('')
 
-  // Demo panel toggle state
+  // Modals state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
-  const [profileAge, setProfileAge] = useState('')
-  const [profileGender, setProfileGender] = useState('')
-  const [profileEmployment, setProfileEmployment] = useState('')
-  const [profileTech, setProfileTech] = useState('')
-  const [accessibilityTags, setAccessibilityTags] = useState<string[]>([])
+  const [disputeModalState, setDisputeModalState] = useState<{
+    isOpen: boolean
+    submissionId: string
+    listingTitle: string
+  }>({
+    isOpen: false,
+    submissionId: '',
+    listingTitle: ''
+  })
+
+  // URL Hash Sync for Tab navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (hash === 'submissions') {
+        setActiveTab('submissions')
+      } else if (hash === 'earnings') {
+        setActiveTab('earnings')
+      } else if (hash === 'available') {
+        setActiveTab('available')
+      }
+    }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  const switchTab = (tab: 'available' | 'submissions' | 'earnings') => {
+    setActiveTab(tab)
+    window.location.hash = tab
+  }
 
   const fetchProfileAndListings = useCallback(async () => {
     setLoading(true)
@@ -140,7 +206,7 @@ export default function TesterDashboard() {
       }
 
       // 1. Fetch profile demographics
-      let profileData = null
+      let profileData: Partial<UserProfile> | null = null
       let profileError = null
 
       try {
@@ -157,7 +223,6 @@ export default function TesterDashboard() {
       }
 
       if (profileError) {
-        // If the row was not found (PGRST116), try to insert a blank one
         if (profileError.code === 'PGRST116') {
           try {
             const newProfile = {
@@ -175,7 +240,6 @@ export default function TesterDashboard() {
               profileData = insertedData
               profileError = null
             } else {
-              // If insert fails (e.g. schema cache error / table missing), fallback to mock data
               profileData = { id: user.id, role: 'tester', age_group: '', gender: '', employment_status: '', tech_literacy: '', accessibility_tags: [] }
               profileError = null
             }
@@ -184,7 +248,6 @@ export default function TesterDashboard() {
             profileError = null
           }
         } else if (profileError.message?.includes('profiles') || profileError.message?.includes('schema cache')) {
-          // If the table doesn't exist, use mock local fallback
           profileData = { id: user.id, role: 'tester', age_group: '', gender: '', employment_status: '', tech_literacy: '', accessibility_tags: [] }
           profileError = null
         }
@@ -197,25 +260,77 @@ export default function TesterDashboard() {
       }
 
       setProfile(profileData)
-      setProfileAge(profileData.age_group || '')
-      setProfileGender(profileData.gender || '')
-      setProfileEmployment(profileData.employment_status || '')
-      setProfileTech(profileData.tech_literacy || '')
-      setAccessibilityTags(profileData.accessibility_tags || [])
 
-      // Fetch tester earnings dynamically (from completed payouts)
-      const { data: payoutsData } = await supabase
-        .from('payouts')
-        .select('amount')
-        .eq('tester_id', user.id)
-        .eq('status', 'completed')
+      // Fetch tester earnings & payouts
+      try {
+        const { data: payoutsData } = await supabase
+          .from('payouts')
+          .select('*')
+          .eq('tester_id', user.id)
+          .order('created_at', { ascending: false })
 
-      if (payoutsData) {
-        const total = payoutsData.reduce((sum, p) => sum + p.amount, 0)
-        setTotalEarnings(total)
+        if (payoutsData && payoutsData.length > 0) {
+          setPayouts(payoutsData.map((p: any) => ({
+            id: p.id,
+            reference_id: p.reference_id || `PAY-GCASH-${p.id.slice(0, 4)}`,
+            amount: p.amount,
+            gcash_number: p.gcash_number || '0917-***-5678',
+            status: p.status || 'completed',
+            created_at: p.created_at
+          })))
+          const totalPaid = payoutsData
+            .filter((p: any) => p.status === 'completed')
+            .reduce((sum: number, p: any) => sum + p.amount, 0)
+          setTotalEarnings(totalPaid)
+          setWithdrawableBalance(Math.max(0, totalPaid))
+        }
+      } catch (err) {
+        console.warn('Payouts query fallback:', err)
       }
 
-      // 2. Fetch all open listings
+      // 2. Fetch submissions for user
+      try {
+        const { data: userSubsData } = await supabase
+          .from('submissions')
+          .select(`
+            id,
+            listing_id,
+            status,
+            rejection_reason,
+            rejection_explanation,
+            dispute_reason,
+            dispute_explanation,
+            submitted_at,
+            created_at,
+            listings (
+              title,
+              rate_per_tester
+            )
+          `)
+          .eq('tester_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (userSubsData && userSubsData.length > 0) {
+          const mappedSubs: SubmissionRecord[] = userSubsData.map((s: any) => ({
+            id: s.id,
+            listing_id: s.listing_id,
+            listing_title: s.listings?.title || 'Testing Listing Task',
+            rate_per_tester: s.listings?.rate_per_tester || 150,
+            status: s.status,
+            rejection_reason: s.rejection_reason,
+            rejection_explanation: s.rejection_explanation,
+            dispute_reason: s.dispute_reason,
+            dispute_explanation: s.dispute_explanation,
+            submitted_at: s.submitted_at,
+            created_at: s.created_at
+          }))
+          setSubmissions(mappedSubs)
+        }
+      } catch (err) {
+        console.warn('User submissions fetch fallback:', err)
+      }
+
+      // 3. Fetch open listings
       const { data: listingsData, error: listingsError } = await supabase
         .from('listings')
         .select(`
@@ -236,14 +351,12 @@ export default function TesterDashboard() {
       if (listingsError) {
         setLoadingError(sanitizeDatabaseError(listingsError, 'Failed to load listings.'))
       } else {
-        // Fetch tester's active/past submissions from Supabase to track status per listing
         let userSubmissions: { id: string; listing_id: string; status: string }[] = []
         try {
           const { data: userSubsData } = await supabase
             .from('submissions')
             .select('id, listing_id, status')
             .eq('tester_id', user.id)
-            .order('created_at', { ascending: false })
 
           if (userSubsData) {
             userSubmissions = userSubsData
@@ -254,10 +367,8 @@ export default function TesterDashboard() {
 
         const mapped = (listingsData || []).map((listing: any) => {
           const firstTask = listing.tasks?.[0]
-          
-          // Match active or completed non-expired user submission
           const userSub = userSubmissions.find((s) => s.listing_id === listing.id && s.status !== 'expired')
-          const userSubmissionStatus = (userSub ? userSub.status : null) as 'in_progress' | 'pending_review' | 'approved' | 'rejected' | null
+          const userSubmissionStatus = (userSub ? userSub.status : null) as any
 
           return {
             id: listing.id,
@@ -281,15 +392,15 @@ export default function TesterDashboard() {
           }
         })
 
-        // 3. Filter listings based on demographic match and accessibility match
+        // Filter based on demographic match
         const filtered = mapped.filter((listing: any) => {
-          if (listing.target_age_group && listing.target_age_group !== profileData.age_group) return false
-          if (listing.target_gender && listing.target_gender !== profileData.gender) return false
-          if (listing.target_employment_status && listing.target_employment_status !== profileData.employment_status) return false
-          if (listing.target_tech_literacy && listing.target_tech_literacy !== profileData.tech_literacy) return false
+          if (listing.target_age_group && listing.target_age_group !== profileData?.age_group) return false
+          if (listing.target_gender && listing.target_gender !== profileData?.gender) return false
+          if (listing.target_employment_status && listing.target_employment_status !== profileData?.employment_status) return false
+          if (listing.target_tech_literacy && listing.target_tech_literacy !== profileData?.tech_literacy) return false
           
           if (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0) {
-            const testerTags = profileData.accessibility_tags || []
+            const testerTags = profileData?.accessibility_tags || []
             const matchesAll = listing.target_accessibility_tags.every((tag: string) => testerTags.includes(tag))
             if (!matchesAll) return false
           }
@@ -309,68 +420,69 @@ export default function TesterDashboard() {
     fetchProfileAndListings()
   }, [fetchProfileAndListings])
 
-  const handleUpdateProfileDemographics = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!profile) return
+  const handleUpdateProfile = async (updatedData: Partial<UserProfile>) => {
+    if (!profile?.id) return
 
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
-          age_group: profileAge || null,
-          gender: profileGender || null,
-          employment_status: profileEmployment || null,
-          tech_literacy: profileTech || null,
-          accessibility_tags: accessibilityTags
-        })
+        .update(updatedData)
         .eq('id', profile.id)
 
-      if (error) {
-        if (error.message?.includes('profiles') || error.message?.includes('schema cache')) {
-          setProfile((prev: any) => prev ? {
-            ...prev,
-            age_group: profileAge,
-            gender: profileGender,
-            employment_status: profileEmployment,
-            tech_literacy: profileTech,
-            accessibility_tags: accessibilityTags
-          } : null)
-          setIsProfileModalOpen(false)
-          return
-        }
+      if (error && !error.message?.includes('profiles') && !error.message?.includes('schema cache')) {
         throw error
       }
-      setIsProfileModalOpen(false)
+
+      setProfile(prev => ({ ...prev, ...updatedData }))
       await fetchProfileAndListings()
     } catch (err: unknown) {
-      alert('Failed to update profile: ' + sanitizeDatabaseError(err))
+      console.error('Profile update failed:', err)
+      throw err
     }
   }
 
-  const handleClaimSlot = (job: JobListing) => {
-    setSelectedJob(job)
-    setCurrentStep('agreement')
+  const handleOpenDispute = (subId: string, title: string) => {
+    setDisputeModalState({
+      isOpen: true,
+      submissionId: subId,
+      listingTitle: title
+    })
   }
 
-  const handleAcceptAgreement = () => {
-    setCurrentStep('active_task')
-  }
+  const handleDisputeSubmit = async (reason: string, explanation: string) => {
+    const subId = disputeModalState.submissionId
+    if (!subId) return
 
-  const handleDeclineAgreement = () => {
-    setSelectedJob(null)
-    setCurrentStep('idle')
-  }
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .update({
+          status: 'disputed',
+          dispute_reason: reason,
+          dispute_explanation: explanation
+        })
+        .eq('id', subId)
 
-  const startMockRecording = () => {
-    setIsRecording(true)
-    setTimeout(() => {
-      setIsRecording(false)
-      setRecordingUploaded(true)
-    }, 3000) // Mock 3-second recording duration
-  }
+      if (error && !error.message?.includes('schema cache')) {
+        console.warn('Dispute DB update error:', error)
+      }
 
-  const uploadMockImage = () => {
-    setImageUploaded(true)
+      // Update local submissions list state
+      setSubmissions(prev => prev.map(s => {
+        if (s.id === subId) {
+          return {
+            ...s,
+            status: 'disputed',
+            dispute_reason: reason,
+            dispute_explanation: explanation
+          }
+        }
+        return s
+      }))
+    } catch (err) {
+      console.error('Failed to submit dispute:', err)
+      throw err
+    }
   }
 
   const handleRequestPayout = async (e: React.FormEvent) => {
@@ -378,7 +490,6 @@ export default function TesterDashboard() {
     setPayoutError(null)
     setPayoutSuccess(false)
     
-    // Validate GCash format (11 digits, starts with 09)
     const gcashRegex = /^09\d{9}$/
     if (!gcashRegex.test(payoutGcashNumber)) {
       setPayoutError('Invalid GCash number. Must be 11 digits starting with 09 (e.g. 09171234567).')
@@ -390,7 +501,7 @@ export default function TesterDashboard() {
       const response = await fetch('/api/payout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: totalEarnings, gcash_number: payoutGcashNumber })
+        body: JSON.stringify({ amount: withdrawableBalance, gcash_number: payoutGcashNumber })
       })
 
       if (!response.ok) {
@@ -399,6 +510,15 @@ export default function TesterDashboard() {
       }
 
       setPayoutSuccess(true)
+      const newRecord: PayoutRecord = {
+        id: `p_${Date.now()}`,
+        reference_id: `PAY-GCASH-${Math.floor(1000 + Math.random() * 9000)}`,
+        amount: withdrawableBalance,
+        gcash_number: payoutGcashNumber,
+        status: 'completed',
+        created_at: new Date().toISOString()
+      }
+      setPayouts(prev => [newRecord, ...prev])
     } catch (err: unknown) {
       if (err instanceof Error) {
         setPayoutError(err.message)
@@ -410,31 +530,22 @@ export default function TesterDashboard() {
     }
   }
 
-  // Submit validation: is answer long enough? is recording ready if required? is image uploaded if required? is rating set?
-  const isFormValid = () => {
-    if (!selectedJob) return false
-    const textValid = answerText.trim().length >= 10
-    const ratingValid = difficultyRating !== null && difficultyRating >= 1 && difficultyRating <= 5
-    const recordingValid = !selectedJob.requires_recording || recordingUploaded
-    const imageValid = !selectedJob.requires_image || imageUploaded
-    
-    return textValid && ratingValid && recordingValid && imageValid
+  // Task submit demo handler
+  const handleClaimSlot = (job: JobListing) => {
+    setSelectedJob(job)
+    setCurrentStep('agreement')
   }
 
   const handleTaskSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isFormValid() || !selectedJob) return
-
-    // Go to submission completion page
+    if (!selectedJob) return
     setCurrentStep('submitted')
-    
-    // Simulate updating earnings
     const reward = selectedJob.rate_per_tester
     setTotalEarnings(prev => prev + reward)
+    setWithdrawableBalance(prev => prev + reward)
   }
 
   const handleCloseSuccess = () => {
-    // Reset workspace state
     setCurrentStep('idle')
     setSelectedJob(null)
     setAnswerText('')
@@ -448,7 +559,7 @@ export default function TesterDashboard() {
       <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-sm font-semibold text-gray-500 font-mono">Loading Tester Dashboard...</span>
+          <span className="text-sm font-semibold text-gray-500 font-mono">Loading Tester Workspace...</span>
         </div>
       </div>
     )
@@ -472,537 +583,407 @@ export default function TesterDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-8 max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
       {currentStep === 'idle' && (
         <>
-          {/* Back button */}
-          <Link href="/dashboard" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-900 mb-6 text-sm">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard selection
-          </Link>
-
-          {/* Notion-style Header */}
-          <div className="border-b border-gray-200 pb-6 mb-8">
-            <span className="text-4xl mb-2 block">📱</span>
-            <h1 className="text-4xl font-extrabold tracking-tight">Tester Workspace</h1>
-            <p className="text-gray-500 mt-2">
-              Browse funded listings, claim slots, record testing sessions, and verify GCash cashouts.
-            </p>
-          </div>
-
-          {/* Profile Summary & Verified GCash Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* GCash Verification */}
-            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex items-start gap-4">
-              <div className="w-12 h-12 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Phone className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 mb-1">Verified GCash Receiver</h3>
-                <p className="text-sm font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded border inline-block">
-                  {gcashNumber}
-                </p>
-                <div className="flex items-center gap-1 mt-2 text-emerald-600 text-xs font-semibold">
-                  <CheckCircle className="w-3.5 h-3.5" /> GCash Account Verified
-                </div>
-              </div>
-            </div>
-
-            {/* Total Earnings */}
-            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex items-start gap-4">
-              <div className="w-12 h-12 rounded-[8px] bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <Wallet className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-1">Total Verified Earnings</h3>
-                <span className="text-2xl font-black text-gray-900 block">₱{totalEarnings.toFixed(2)}</span>
-                <button 
-                  onClick={() => setShowPayoutModal(true)}
-                  disabled={totalEarnings === 0}
-                  className="mt-2 text-xs font-semibold text-emerald-600 hover:text-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Request GCash Payout &rarr;
-                </button>
-              </div>
-            </div>
-
-            {/* Demographic Profile summary */}
-            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex items-start gap-4">
-              <div className="w-12 h-12 rounded-[8px] bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 font-bold text-lg">
-                👤
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-1">Demographics Profile</h3>
-                <div className="text-xs text-gray-600 space-y-0.5 mt-2">
-                  <div>Age: <span className="font-semibold text-gray-800">{profile?.age_group || 'Not set'}</span></div>
-                  <div>Gender: <span className="font-semibold text-gray-800">{profile?.gender || 'Not set'}</span></div>
-                  <div>Job: <span className="font-semibold text-gray-800">{profile?.employment_status || 'Not set'}</span></div>
-                  <div>Tech: <span className="font-semibold text-gray-800">{profile?.tech_literacy || 'Not set'}</span></div>
-                </div>
-                <button 
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="mt-3 text-xs font-semibold text-purple-600 hover:text-purple-800"
-                >
-                  Configure Demographics &rarr;
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Available Jobs Grid */}
-          <div>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">Available Testing Slots</h2>
-            
-            {listings.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-[12px] p-12 text-center text-gray-500 shadow-sm space-y-3">
-                <p className="text-lg font-semibold text-gray-700">No matching tasks found</p>
-                <p className="text-sm text-gray-400 max-w-md mx-auto">
-                  Try updating your demographics profile above to unlock more target-matched jobs, or check back later.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {listings.map((job) => {
-                  const btnConfig = getButtonConfig(job)
-                  const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
-                  return (
-                    <div 
-                      key={job.id} 
-                      className={`bg-white border rounded-[12px] p-6 flex flex-col justify-between shadow-sm transition-all duration-200 ${
-                        isFull ? 'border-gray-200 opacity-60' : 'border-gray-200 hover:border-emerald-500 hover:shadow-md'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <span className="text-xl font-black text-emerald-700">₱{job.rate_per_tester}</span>
-                          <span className={`text-xs px-2.5 py-1 rounded-[8px] border font-bold ${
-                            job.slots_filled >= job.slots_count
-                              ? 'bg-gray-100 text-gray-500 border-gray-200' 
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          }`}>
-                            {job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
-                          </span>
-                        </div>
-                        
-                        <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-1.5 flex-wrap">
-                          {job.title}
-                          {job.is_quick_impression && (
-                            <span className="text-[10px] font-bold tracking-wider uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md inline-block">
-                              ⚡ 5s Impression
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">{job.description}</p>
-  
-                        {/* Deliverables & Targets details */}
-                        <div className="flex flex-wrap gap-2 mb-6">
-                          {job.requires_recording && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
-                              <Video className="w-3 h-3" /> Screen Recording
-                            </span>
-                          )}
-                          {job.requires_image && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
-                              <ImageIcon className="w-3 h-3" /> Screenshot
-                            </span>
-                          )}
-                          {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-[8px] font-medium">
-                              🎯 Target Match
-                            </span>
-                          )}
-                        </div>
-                      </div>
-  
-                      <Link
-                        href={btnConfig.href}
-                        className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all flex items-center justify-center ${btnConfig.className}`}
-                        onClick={(e) => {
-                          if (btnConfig.disabled) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        {btnConfig.text}
-                      </Link>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Active Agreement Modal step */}
-      {currentStep === 'agreement' && selectedJob && (
-        <AgreementModal 
-          title={`Acknowledge Testing Guidelines: ${selectedJob.title}`}
-          content={NDA_CONTENT}
-          onAccept={handleAcceptAgreement}
-          onDecline={handleDeclineAgreement}
-        />
-      )}
-
-      {/* Active task section demonstration */}
-      {currentStep === 'active_task' && selectedJob && (
-        <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-md flex flex-col relative">
-          
-          {/* 1. Timer Display Mockup */}
-          <TimerDisplay 
-            initialSeconds={1800} 
-            onExpire={() => alert('Demo Timer Expired!')} 
-          />
-
-          {/* 2. Escrow Status Bar Mockup */}
-          <EscrowStatusBar 
-            budget={selectedJob.rate_per_tester} 
-            slots={selectedJob.slots_count - selectedJob.slots_filled} 
-            status="active" 
-          />
-
-          {/* Main workspace area */}
-          <div className="p-8 space-y-8">
-            <div className="border-b border-gray-100 pb-4">
-              <h2 className="text-2xl font-extrabold mb-1">Testing Workspace: {selectedJob.title}</h2>
-              <p className="text-sm text-gray-500">Submit verified evidence below. Be accurate to secure the escrow payout.</p>
-            </div>
-
-            {/* Instruction cards */}
-            <div className="bg-gray-50 rounded-[8px] p-5 border border-gray-100">
-              <h3 className="font-bold text-sm text-gray-700 mb-2">Detailed Task Steps:</h3>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-                {selectedJob.description}
+          {/* Header Banner */}
+          <div className="border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span className="text-4xl mb-2 block">📱</span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Tester Workspace</h1>
+              <p className="text-gray-500 text-sm mt-1">
+                Browse funded listings, claim testing slots, track your submissions, and withdraw earnings.
               </p>
             </div>
 
-            <form onSubmit={handleTaskSubmit} className="space-y-6">
-              
-              {/* Question text response */}
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-[10px] font-extrabold text-xs flex items-center gap-2 self-start md:self-auto transition-all shadow-xs"
+            >
+              <span>👤 Profile & Notifications</span>
+            </button>
+          </div>
+
+          {/* Metric Summary Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex items-center gap-4">
+              <div className="w-11 h-11 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Phone className="w-5 h-5" />
+              </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{selectedJob.question_text}</label>
-                <textarea
-                  required
-                  value={answerText}
-                  onChange={(e) => setAnswerText(e.target.value)}
-                  placeholder="Explain clearly in at least 10 characters..."
-                  rows={4}
-                  className="w-full p-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-emerald-600 text-sm focus:ring-1 focus:ring-emerald-600"
-                />
-                <span className="text-xs text-gray-400 mt-1 block">
-                  Character count: {answerText.length} / 10 required
-                </span>
+                <span className="text-xs text-gray-500 font-semibold block">Verified GCash Receiver</span>
+                <span className="text-sm font-mono text-gray-800 font-bold">{gcashNumber}</span>
               </div>
+            </div>
 
-              {/* Media Evidence Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Recording Upload/Mock */}
-                {selectedJob.requires_recording && (
-                  <div className="p-5 border border-gray-200 rounded-[12px] flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-800 flex items-center gap-1.5 mb-1">
-                        <Video className="w-4 h-4 text-emerald-600" /> Screen Recording
-                      </h4>
-                      <p className="text-xs text-gray-400 mb-4">Record your flow simulation on this device.</p>
-                    </div>
-
-                    {recordingUploaded ? (
-                      <div className="p-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-[8px] flex items-center justify-between text-xs font-semibold">
-                        <span className="flex items-center gap-1.5">
-                          <Check className="w-4 h-4" /> recording_session.mp4 uploaded
-                        </span>
-                        <button 
-                          type="button" 
-                          onClick={() => setRecordingUploaded(false)}
-                          className="underline hover:text-emerald-900"
-                        >
-                          Redo
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={startMockRecording}
-                        disabled={isRecording}
-                        className={`w-full py-2.5 border text-xs font-semibold rounded-[8px] flex items-center justify-center gap-2 transition-all ${
-                          isRecording 
-                            ? 'bg-rose-50 border-rose-300 text-rose-600 animate-pulse'
-                            : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
-                        }`}
-                      >
-                        {isRecording ? (
-                          <>
-                            <Square className="w-4 h-4 fill-rose-600" /> Recording (3s Mock)...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4" /> Start Screen Recording
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {selectedJob.requires_image && (
-                  <div className="p-5 border border-gray-200 rounded-[12px] flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-800 flex items-center gap-1.5 mb-1">
-                        <ImageIcon className="w-4 h-4 text-emerald-600" /> Screenshot Evidence
-                      </h4>
-                      <p className="text-xs text-gray-400 mb-4">Upload checkout success page or validation screen.</p>
-                    </div>
-
-                    {imageUploaded ? (
-                      <div className="p-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-[8px] flex items-center justify-between text-xs font-semibold">
-                        <span className="flex items-center gap-1.5">
-                          <Check className="w-4 h-4" /> checkout_screenshot.png uploaded
-                        </span>
-                        <button 
-                          type="button" 
-                          onClick={() => setImageUploaded(false)}
-                          className="underline hover:text-emerald-900"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={uploadMockImage}
-                        className="w-full py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 rounded-[8px] flex items-center justify-center gap-2 transition-all"
-                      >
-                        <UploadCloud className="w-4 h-4" /> Mock Image Upload
-                      </button>
-                    )}
-                  </div>
-                )}
+            <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex items-center justify-center gap-4">
+              <div className="w-11 h-11 rounded-[8px] bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Wallet className="w-5 h-5" />
               </div>
-
-              {/* Difficulty Rating (1-5 constraint) */}
-              <div className="p-5 border border-gray-200 rounded-[12px]">
-                <label className="block text-sm font-bold text-gray-700 mb-3">Rate the task difficulty:</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setDifficultyRating(val)}
-                      className={`w-10 h-10 rounded-[8px] border font-bold text-sm flex items-center justify-center transition-all ${
-                        difficultyRating === val
-                          ? 'bg-emerald-600 border-emerald-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {val}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex justify-between text-[10px] text-gray-400 mt-2">
-                  <span>Very Easy (1)</span>
-                  <span>Very Hard (5)</span>
-                </div>
+              <div className="flex-1">
+                <span className="text-xs text-gray-500 font-semibold block">Available Balance</span>
+                <span className="text-xl font-black text-emerald-600 block">₱{withdrawableBalance.toFixed(2)}</span>
               </div>
-
-              {/* Submit trigger button (stays disabled until required questions are completed) */}
-              <div className="pt-6 border-t border-gray-100 flex justify-between items-center">
-                <button
-                  type="button"
-                  onClick={handleDeclineAgreement}
-                  className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-sm font-semibold rounded-[8px] text-gray-700"
-                >
-                  Forfeit Slot
-                </button>
-                <button
-                  type="submit"
-                  disabled={!isFormValid()}
-                  className={`px-6 py-3 font-extrabold text-sm rounded-[8px] text-white shadow-sm transition-all ${
-                    isFormValid() 
-                      ? 'bg-emerald-600 hover:bg-emerald-700' 
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  Submit Test Submission
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Submitted and completed success state */}
-      {currentStep === 'submitted' && selectedJob && (
-        <div className="bg-white border border-gray-200 rounded-[12px] p-8 max-w-lg mx-auto text-center shadow-md space-y-6">
-          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-            <CheckCircle className="w-8 h-8" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black text-gray-900">Task Submitted Successfully!</h2>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Your responses and media evidence are now stored. The poster has a review window of {selectedJob.requires_recording ? '60' : '30'} minutes.
-            </p>
-            <p className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 rounded px-3 py-1.5 inline-block mt-4">
-              ₱{selectedJob.rate_per_tester} has been reserved for you in Escrow.
-            </p>
-          </div>
-          <button
-            onClick={handleCloseSuccess}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-sm shadow-sm transition-all"
-          >
-            Acknowledge & Return to Dashboard
-          </button>
-        </div>
-      )}
-
-      {/* Profile Demographics Modal */}
-      {isProfileModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[12px] w-full max-w-md shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-extrabold text-lg">Configure Profile Demographics</h3>
-              <button 
-                type="button"
-                onClick={() => setIsProfileModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg"
+              <button
+                onClick={() => setShowPayoutModal(true)}
+                disabled={withdrawableBalance === 0}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[8px] text-xs font-bold disabled:opacity-50"
               >
-                &times;
+                Withdraw
               </button>
             </div>
 
-            <form onSubmit={handleUpdateProfileDemographics} className="p-6 space-y-4">
-              <p className="text-xs text-gray-500 mb-4">
-                Posters target specific demographics to test their applications. Provide accurate info to unlock target-matched tasks.
-              </p>
-
+            <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex items-center gap-4">
+              <div className="w-11 h-11 rounded-[8px] bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <CheckSquare className="w-5 h-5" />
+              </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Age Group</label>
-                <select
-                  value={profileAge}
-                  onChange={e => setProfileAge(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
-                >
-                  <option value="">Not Specified</option>
-                  <option value="18-24">18 - 24 years old</option>
-                  <option value="25-34">25 - 34 years old</option>
-                  <option value="35-44">35 - 44 years old</option>
-                  <option value="45+">45+ years old</option>
-                </select>
+                <span className="text-xs text-gray-500 font-semibold block">Submissions Recorded</span>
+                <span className="text-xl font-black text-gray-900 block">{submissions.length} Tasks</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Navigation Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8" aria-label="Tabs">
+              <button
+                onClick={() => switchTab('available')}
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
+                  activeTab === 'available'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Available Tests ({listings.length})</span>
+              </button>
+
+              <button
+                onClick={() => switchTab('submissions')}
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
+                  activeTab === 'submissions'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <CheckSquare className="w-4 h-4" />
+                <span>My Submissions ({submissions.length})</span>
+              </button>
+
+              <button
+                onClick={() => switchTab('earnings')}
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
+                  activeTab === 'earnings'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                <span>Earnings & Payout History</span>
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab 1: Available Tests */}
+          {activeTab === 'available' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Open Testing Opportunities</h2>
+                <span className="text-xs text-gray-500">Updated in real-time</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Gender</label>
-                <select
-                  value={profileGender}
-                  onChange={e => setProfileGender(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
-                >
-                  <option value="">Not Specified</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
+              {listings.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-[12px] p-12 text-center text-gray-500 shadow-xs space-y-3">
+                  <p className="text-lg font-semibold text-gray-700">No matching tasks found</p>
+                  <p className="text-sm text-gray-400 max-w-md mx-auto">
+                    Try configuring your profile demographics to unlock more target-matched jobs.
+                  </p>
+                  <button
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="px-4 py-2 bg-purple-600 text-white font-bold text-xs rounded-[8px] hover:bg-purple-700"
+                  >
+                    Update Demographics Profile
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {listings.map((job) => {
+                    const btnConfig = getButtonConfig(job)
+                    const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
+                    return (
+                      <div 
+                        key={job.id} 
+                        className={`bg-white border rounded-[12px] p-6 flex flex-col justify-between shadow-xs transition-all duration-200 ${
+                          isFull ? 'border-gray-200 opacity-60' : 'border-gray-200 hover:border-emerald-500 hover:shadow-md'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-4">
+                            <span className="text-2xl font-black text-emerald-700">₱{job.rate_per_tester}</span>
+                            <span className={`text-xs px-2.5 py-1 rounded-[8px] border font-bold ${
+                              job.slots_filled >= job.slots_count
+                                ? 'bg-gray-100 text-gray-500 border-gray-200' 
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            }`}>
+                              {job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
+                            </span>
+                          </div>
+                          
+                          <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-1.5 flex-wrap">
+                            {job.title}
+                            {job.is_quick_impression && (
+                              <span className="text-[10px] font-bold tracking-wider uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md inline-block">
+                                ⚡ 5s Impression
+                              </span>
+                            )}
+                          </h3>
+                          <p className="text-sm text-gray-500 mb-4 line-clamp-2">{job.description}</p>
+    
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            {job.requires_recording && (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
+                                <Video className="w-3 h-3" /> Screen Recording
+                              </span>
+                            )}
+                            {job.requires_image && (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
+                                <ImageIcon className="w-3 h-3" /> Screenshot
+                              </span>
+                            )}
+                            {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-[8px] font-medium">
+                                🎯 Target Match
+                              </span>
+                            )}
+                          </div>
+                        </div>
+    
+                        <Link
+                          href={btnConfig.href}
+                          className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all flex items-center justify-center ${btnConfig.className}`}
+                          onClick={(e) => {
+                            if (btnConfig.disabled) {
+                              e.preventDefault()
+                            }
+                          }}
+                        >
+                          {btnConfig.text}
+                        </Link>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 2: My Submissions */}
+          {activeTab === 'submissions' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Your Submission History</h2>
+                <span className="text-xs text-gray-500">{submissions.length} total entries</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Employment Status</label>
-                <select
-                  value={profileEmployment}
-                  onChange={e => setProfileEmployment(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
-                >
-                  <option value="">Not Specified</option>
-                  <option value="employed">Employed</option>
-                  <option value="unemployed">Unemployed</option>
-                  <option value="student">Student</option>
-                  <option value="self-employed">Self-Employed / Freelancer</option>
-                </select>
-              </div>
+              {submissions.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-[12px] p-12 text-center text-gray-500 shadow-xs space-y-3">
+                  <FileText className="w-10 h-10 text-gray-300 mx-auto" />
+                  <p className="text-base font-semibold text-gray-700">No submissions found</p>
+                  <p className="text-sm text-gray-400">Claim an available task to start earning rewards.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {submissions.map((sub) => {
+                    return (
+                      <div 
+                        key={sub.id} 
+                        className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-xs space-y-4 hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                          <div>
+                            <h3 className="font-extrabold text-base text-gray-900">{sub.listing_title}</h3>
+                            <span className="text-xs text-gray-400 font-medium">
+                              Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Tech Literacy Level</label>
-                <select
-                  value={profileTech}
-                  onChange={e => setProfileTech(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-sm focus:outline-none focus:border-purple-500"
-                >
-                  <option value="">Not Specified</option>
-                  <option value="non_technical">Non-Technical</option>
-                  <option value="casual_user">Casual User</option>
-                  <option value="student_dev">Developer / Technical</option>
-                </select>
-              </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg font-black text-emerald-600">₱{sub.rate_per_tester}</span>
+                            
+                            {/* Status badge */}
+                            {sub.status === 'approved' && (
+                              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-extrabold rounded-full flex items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5" /> Approved
+                              </span>
+                            )}
+                            {sub.status === 'pending_review' && (
+                              <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-extrabold rounded-full flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" /> Under Review
+                              </span>
+                            )}
+                            {sub.status === 'disputed' && (
+                              <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold rounded-full flex items-center gap-1">
+                                <Scale className="w-3.5 h-3.5" /> Disputed
+                              </span>
+                            )}
+                            {sub.status === 'rejected' && (
+                              <span className="px-3 py-1 bg-rose-100 text-rose-800 text-xs font-extrabold rounded-full flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" /> Rejected
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Accessibility Accommodations</label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={accessibilityTags.includes('screen_reader')}
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setAccessibilityTags([...accessibilityTags, 'screen_reader']);
-                        } else {
-                          setAccessibilityTags(accessibilityTags.filter(t => t !== 'screen_reader'));
-                        }
-                      }}
-                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                    />
-                    I use a Screen Reader
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={accessibilityTags.includes('keyboard_only')}
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setAccessibilityTags([...accessibilityTags, 'keyboard_only']);
-                        } else {
-                          setAccessibilityTags(accessibilityTags.filter(t => t !== 'keyboard_only'));
-                        }
-                      }}
-                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                    />
-                    I navigate using Keyboard-Only
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={accessibilityTags.includes('color_blind')}
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setAccessibilityTags([...accessibilityTags, 'color_blind']);
-                        } else {
-                          setAccessibilityTags(accessibilityTags.filter(t => t !== 'color_blind'));
-                        }
-                      }}
-                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                    />
-                    I have a Color Blindness profile
-                  </label>
+                        {/* Rejection Details & Dispute Action */}
+                        {sub.status === 'rejected' && (
+                          <div className="bg-rose-50 border border-rose-200 rounded-[10px] p-4 text-xs space-y-2">
+                            <div className="font-bold text-rose-900">
+                              Rejection Category: {formatRejectionReason(sub.rejection_reason)}
+                            </div>
+                            {sub.rejection_explanation && (
+                              <p className="text-rose-950 italic">
+                                &quot;{sub.rejection_explanation}&quot;
+                              </p>
+                            )}
+                            <div className="pt-2 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDispute(sub.id, sub.listing_title)}
+                                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-[6px] text-xs flex items-center gap-1.5 shadow-xs"
+                              >
+                                <ShieldAlert className="w-3.5 h-3.5" /> Submit Rejection Dispute
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Dispute Details */}
+                        {sub.status === 'disputed' && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-[10px] p-4 text-xs space-y-1">
+                            <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                              <Scale className="w-4 h-4 text-amber-700" /> Dispute Reason: {formatDisputeReason(sub.dispute_reason)}
+                            </div>
+                            {sub.dispute_explanation && (
+                              <p className="text-amber-950 italic">
+                                &quot;{sub.dispute_explanation}&quot;
+                              </p>
+                            )}
+                            <span className="text-[10px] text-amber-700 block pt-1">
+                              Support team is reviewing this dispute. Escrow remains held.
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Link to workspace */}
+                        <div className="flex justify-end pt-1">
+                          <Link
+                            href={`/dashboard/tester/tasks/${sub.listing_id}`}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          >
+                            View Workspace & Debrief Thread &rarr;
+                          </Link>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 3: Earnings & Payout History */}
+          {activeTab === 'earnings' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-xs">
+                  <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Total Earnings</span>
+                  <span className="text-3xl font-black text-gray-900">₱{totalEarnings.toFixed(2)}</span>
+                </div>
+
+                <div className="bg-white border border-emerald-200 rounded-[12px] p-6 shadow-xs bg-emerald-50/30">
+                  <span className="text-xs text-emerald-800 font-bold block uppercase tracking-wider mb-1">Withdrawable Balance</span>
+                  <span className="text-3xl font-black text-emerald-700">₱{withdrawableBalance.toFixed(2)}</span>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Completed Payouts</span>
+                    <span className="text-3xl font-black text-gray-900">{payouts.length} Transactions</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPayoutModal(true)}
+                    disabled={withdrawableBalance === 0}
+                    className="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-xs shadow-xs disabled:opacity-50"
+                  >
+                    Request GCash Payout
+                  </button>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsProfileModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-[8px] text-xs font-semibold shadow-sm transition-all"
-                >
-                  Save Demographics
-                </button>
+              {/* Payout History Table */}
+              <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-xs">
+                <div className="p-5 border-b border-gray-200 bg-gray-50">
+                  <h3 className="font-extrabold text-base text-gray-900">GCash Payout History</h3>
+                </div>
+
+                {payouts.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 text-xs font-mono">
+                    No payout transactions requested yet.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider font-bold border-b border-gray-200">
+                        <tr>
+                          <th className="p-4">Reference ID</th>
+                          <th className="p-4">Date & Time</th>
+                          <th className="p-4">GCash Number</th>
+                          <th className="p-4">Amount</th>
+                          <th className="p-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 font-medium">
+                        {payouts.map(p => (
+                          <tr key={p.id} className="hover:bg-gray-50">
+                            <td className="p-4 font-mono font-bold text-gray-900">{p.reference_id}</td>
+                            <td className="p-4 text-gray-600">{new Date(p.created_at).toLocaleString()}</td>
+                            <td className="p-4 text-gray-700 font-mono">{p.gcash_number}</td>
+                            <td className="p-4 font-extrabold text-emerald-700">₱{p.amount.toFixed(2)}</td>
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold uppercase text-[10px]">
+                                {p.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          )}
+        </>
       )}
+
+      {/* Profile Settings Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        profile={profile}
+        onSaveProfile={handleUpdateProfile}
+      />
+
+      {/* Dispute Modal */}
+      <DisputeModal
+        isOpen={disputeModalState.isOpen}
+        onClose={() => setDisputeModalState(prev => ({ ...prev, isOpen: false }))}
+        submissionId={disputeModalState.submissionId}
+        listingTitle={disputeModalState.listingTitle}
+        onSubmitDispute={handleDisputeSubmit}
+      />
 
       {/* Payout Modal */}
       {showPayoutModal && (
@@ -1039,7 +1020,7 @@ export default function TesterDashboard() {
                 <form onSubmit={handleRequestPayout} className="space-y-4">
                   <div className="bg-gray-50 p-4 rounded-[8px] flex justify-between items-center border border-gray-100">
                     <span className="text-sm font-semibold text-gray-600">Available Balance</span>
-                    <span className="text-lg font-black text-emerald-600">₱{totalEarnings.toFixed(2)}</span>
+                    <span className="text-lg font-black text-emerald-600">₱{withdrawableBalance.toFixed(2)}</span>
                   </div>
 
                   <div>
