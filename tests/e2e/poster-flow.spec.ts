@@ -41,8 +41,9 @@ test.describe('Poster Flow E2E', () => {
 
     // Enable A/B Comparative Testing (second checkbox in form) and fill variant URLs
     await page.locator('input[type="checkbox"]').nth(1).check();
-    await page.locator('input[type="url"]').first().fill('https://variant-a.example.com');
-    await page.locator('input[type="url"]').last().fill('https://variant-b.example.com');
+    // Skip the Site URL field (first url input) — variant URLs are the 2nd and 3rd
+    await page.locator('input[type="url"]').nth(1).fill('https://variant-a.example.com');
+    await page.locator('input[type="url"]').nth(2).fill('https://variant-b.example.com');
 
     // Add accessibility requirements (fourth checkbox in form)
     await page.locator('input[type="checkbox"]').nth(3).check();
