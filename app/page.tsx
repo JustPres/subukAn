@@ -5,13 +5,55 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase/client'
 
+export interface ListingFeedItem {
+  id: string
+  title: string
+  description: string | null
+  rate_per_tester: number
+  slots_count: number
+  slots_filled: number
+  status: string
+}
+
+const DEFAULT_FEED_LISTINGS: ListingFeedItem[] = [
+  {
+    id: 'feed-1',
+    title: 'E-Commerce GCash & Maya Checkout Flow',
+    description: 'Verify localized payment gateway response times and check for UI distortion on mobile screens.',
+    rate_per_tester: 250,
+    slots_count: 5,
+    slots_filled: 2,
+    status: 'open'
+  },
+  {
+    id: 'feed-2',
+    title: 'Rider Delivery App Pin Accuracy Verification',
+    description: 'Test real-time GPS location pin updates and map marker rendering across Metro Manila locations.',
+    rate_per_tester: 400,
+    slots_count: 10,
+    slots_filled: 6,
+    status: 'open'
+  },
+  {
+    id: 'feed-3',
+    title: 'Sari-Sari Store POS Inventory Audit',
+    description: 'Perform quick 5-minute impression testing on inventory list search filtering and checkout modal.',
+    rate_per_tester: 150,
+    slots_count: 8,
+    slots_filled: 3,
+    status: 'open'
+  }
+]
+
 export default function Home() {
   const [user, setUser] = useState<unknown | null>(null)
   const [loading, setLoading] = useState(true)
+  const [listings, setListings] = useState<ListingFeedItem[]>([])
+  const [listingsLoading, setListingsLoading] = useState(true)
   const supabase = createBrowserClient()
 
   useEffect(() => {
-    const fetchSession = async () => {
+    const fetchSessionAndListings = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         setUser(session?.user ?? null)
@@ -20,9 +62,26 @@ export default function Home() {
       } finally {
         setLoading(false)
       }
+
+      try {
+        const { data } = await supabase
+          .from('listings')
+          .select('id, title, description, rate_per_tester, slots_count, slots_filled, status')
+          .eq('status', 'open')
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        if (data && data.length > 0) {
+          setListings(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch open listings:', err)
+      } finally {
+        setListingsLoading(false)
+      }
     }
 
-    fetchSession()
+    fetchSessionAndListings()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -184,6 +243,93 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Live Available Test Tasks Feed Section (T1) */}
+      <section id="available-tasks" className="py-16 bg-white border-b border-steel/20">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
+            <div>
+              <div className="inline-flex items-center space-x-2 bg-tint-open/60 text-tint-open-text text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                <span className="w-1.5 h-1.5 bg-tint-open-text rounded-full animate-pulse"></span>
+                <span>Live Marketplace Feed</span>
+              </div>
+              <h2 className="text-3xl font-extrabold text-ink tracking-tight">Available Test Tasks</h2>
+              <p className="text-slate text-sm mt-1">
+                Browse open testing slots with pre-funded escrow payouts ready to be claimed.
+              </p>
+            </div>
+            <Link
+              href="/auth/login?role=tester"
+              className="mt-4 md:mt-0 text-sm font-bold text-primary hover:text-primary-hover flex items-center space-x-1"
+            >
+              <span>View all tester tasks</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          {listingsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border border-steel/30 rounded-card p-6 bg-canvas animate-pulse h-52 flex flex-col justify-between">
+                  <div>
+                    <div className="h-5 bg-steel/20 rounded w-3/4 mb-3"></div>
+                    <div className="h-4 bg-steel/20 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-steel/20 rounded w-2/3 mb-4"></div>
+                  </div>
+                  <div className="h-9 bg-steel/20 rounded w-full"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(listings.length > 0 ? listings : DEFAULT_FEED_LISTINGS).map((listing) => {
+                const slotsLeft = Math.max(0, (listing.slots_count || 0) - (listing.slots_filled || 0))
+                return (
+                  <div 
+                    key={listing.id}
+                    className="border border-steel/30 rounded-card p-6 bg-white flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate/40 transition-all group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="badge-status badge-open">Open Sky</span>
+                        <span className="text-xs font-bold text-slate bg-canvas px-2.5 py-1 rounded-full border border-steel/30">
+                          {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-ink mb-2 group-hover:text-primary transition-colors line-clamp-1">
+                        {listing.title}
+                      </h3>
+                      <p className="text-slate text-sm mb-6 line-clamp-2 leading-relaxed">
+                        {listing.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-steel/20 flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate font-medium font-mono uppercase tracking-wider">Bounty Rate</span>
+                        <span className="text-xl font-extrabold text-ink">
+                          ₱{listing.rate_per_tester?.toLocaleString() ?? 0}
+                        </span>
+                      </div>
+                      <Link
+                        href="/auth/login?role=tester"
+                        className="w-full text-center py-2.5 bg-primary hover:bg-primary-hover text-white rounded-button text-sm font-bold shadow-sm transition-all flex items-center justify-center space-x-1.5"
+                      >
+                        <span>Claim Slot &amp; Start Test</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
