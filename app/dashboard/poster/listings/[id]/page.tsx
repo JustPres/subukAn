@@ -17,7 +17,8 @@ import {
   ChevronRight,
   BarChart3,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Wallet
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 
@@ -431,7 +432,7 @@ export default function ListingDetailsPage({ params }: PageProps) {
         {activeTab === 'submissions' && (
           <div className="space-y-6">
             {/* Quick Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex items-center gap-4">
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
                   <CheckCircle className="w-6 h-6" />
@@ -459,6 +460,107 @@ export default function ListingDetailsPage({ params }: PageProps) {
                   <span className="text-2xl font-extrabold text-gray-900">{averageDifficulty.toFixed(1)} / 5</span>
                 </div>
               </div>
+              <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm flex flex-col justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-amber-50 text-amber-600 rounded-lg shrink-0">
+                    <Wallet className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Escrow Payouts</span>
+                    <span className="text-xl font-extrabold text-gray-900">
+                      ₱{(approvedSubmissions.length * listing.rate_per_tester).toLocaleString()} <span className="text-xs font-normal text-gray-500">disbursed</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs border-t border-gray-100 pt-3 mt-3">
+                  <div>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Budget</span>
+                    <span className="font-bold text-gray-700">₱{listing.total_budget.toLocaleString()}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Held Escrow</span>
+                    <span className="font-bold text-emerald-600">₱{Math.max(0, listing.total_budget - (approvedSubmissions.length * listing.rate_per_tester)).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Question-by-Question Task Analytics */}
+            <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-sm space-y-4">
+              <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    Question-by-Question Task Analytics
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Granular performance metrics breakdown per task question.</p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full">
+                  {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
+                </span>
+              </div>
+
+              {tasks.length === 0 ? (
+                <div className="p-6 text-center text-xs text-gray-400 font-medium">
+                  No tasks configured for this testing round.
+                </div>
+              ) : (
+                <div className="space-y-4 pt-1">
+                  {tasks.map((task, idx) => {
+                    const taskResps = responses.filter(r => r.task_id === task.id);
+                    const totalCount = taskResps.length;
+                    const avgTime = totalCount > 0
+                      ? taskResps.reduce((acc, r) => acc + (r.time_on_task_seconds || 0), 0) / totalCount
+                      : 0;
+                    const avgDiff = totalCount > 0
+                      ? taskResps.reduce((acc, r) => acc + (r.difficulty_rating || 0), 0) / totalCount
+                      : 0;
+                    const successCount = taskResps.filter(r => r.completed_successfully).length;
+                    const successRate = totalCount > 0 ? (successCount / totalCount) * 100 : 0;
+
+                    return (
+                      <div
+                        key={task.id}
+                        className="bg-gray-50/70 border border-gray-200/80 rounded-[10px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-gray-300 transition-colors"
+                      >
+                        <div className="space-y-1 max-w-xl">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-mono">
+                              Task {task.order_index !== undefined ? task.order_index + 1 : idx + 1}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-gray-900 leading-snug">
+                            {task.question_text || 'Untitled Question Task'}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 shrink-0 bg-white p-3 rounded-lg border border-gray-100 shadow-2xs text-center md:text-left">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Success Rate</span>
+                            <span className="text-base font-black text-emerald-600">
+                              {totalCount > 0 ? `${successRate.toFixed(0)}%` : 'N/A'}
+                            </span>
+                          </div>
+
+                          <div className="border-l border-gray-100 pl-3">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Avg. Time</span>
+                            <span className="text-base font-black text-blue-900">
+                              {totalCount > 0 ? `${avgTime.toFixed(1)}s` : 'N/A'}
+                            </span>
+                          </div>
+
+                          <div className="border-l border-gray-100 pl-3">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Avg. Difficulty</span>
+                            <span className="text-base font-black text-purple-900">
+                              {totalCount > 0 ? `${avgDiff.toFixed(1)} / 5` : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* List Table */}

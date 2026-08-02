@@ -26,3 +26,4 @@
 [2026-08-02 15:25:00] Build/Typecheck Successful - Added payment_settings column migration (00010_add_payment_settings.sql) and integrated Settings navigation link in Poster DashboardSidebar.
 [2026-08-02 15:26:00] Build/Typecheck Successful - Implemented Rich Poster Insights (P12) in listing page with Escrow Payout Card (total budget, disbursed payouts, remaining escrow) and Question-by-Question Task Analytics breakdown.
 [2026-08-02 15:28:00] Build/Lint Successful - Rendered Live Available Test Tasks feed (T1) in app/page.tsx querying Supabase open listings and presenting listing cards with title, description snippet, ₱ rate, slots left, and login redirect link.
+[2026-08-02 15:35:00] Build/Lint/Test/E2E Successful - Integrated custom poster payment settings fallback into PayMongo client helpers (isSandboxMode, createPaymentLink, processGCashPayout) and payout POST API router.

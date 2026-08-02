@@ -17,8 +17,11 @@ export interface PayoutResponse {
 /**
  * Helper to determine if we are in sandbox / mock mode.
  */
-function isSandboxMode(): boolean {
-  const secretKey = process.env.PAYMONGO_SECRET_KEY;
+function isSandboxMode(customSettings?: any): boolean {
+  if (customSettings && typeof customSettings.sandbox_mode === 'boolean') {
+    return customSettings.sandbox_mode;
+  }
+  const secretKey = customSettings?.paymongo_secret_key || process.env.PAYMONGO_SECRET_KEY;
   if (!secretKey || secretKey.trim() === '' || secretKey === 'undefined') {
     return true;
   }
@@ -42,9 +45,10 @@ function isSandboxMode(): boolean {
 export async function createPaymentLink(
   amount: number,
   description: string,
-  referenceId: string
+  referenceId: string,
+  customSettings?: any
 ): Promise<PaymentLinkResponse> {
-  if (isSandboxMode()) {
+  if (isSandboxMode(customSettings)) {
     // Simulate network latency
     await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -62,7 +66,7 @@ export async function createPaymentLink(
     };
   }
 
-  const secretKey = process.env.PAYMONGO_SECRET_KEY || '';
+  const secretKey = customSettings?.paymongo_secret_key || process.env.PAYMONGO_SECRET_KEY || '';
   const amountInCents = Math.round(amount * 100);
   const authHeader = `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`;
 
@@ -122,8 +126,9 @@ export async function processGCashPayout(params: {
   amount: number;
   phoneNumber: string;
   idempotencyKey: string;
+  customSettings?: any;
 }): Promise<PayoutResponse> {
-  if (isSandboxMode()) {
+  if (isSandboxMode(params.customSettings)) {
     // Simulate network latency
     await new Promise((resolve) => setTimeout(resolve, 800));
 
@@ -139,7 +144,7 @@ export async function processGCashPayout(params: {
     };
   }
 
-  const secretKey = process.env.PAYMONGO_SECRET_KEY || '';
+  const secretKey = params.customSettings?.paymongo_secret_key || process.env.PAYMONGO_SECRET_KEY || '';
   const amountInCents = Math.round(params.amount * 100);
   const authHeader = `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`;
 

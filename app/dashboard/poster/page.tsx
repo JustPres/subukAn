@@ -46,6 +46,18 @@ export default function PosterDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
+  // Tab & Custom Payment Settings states
+  const [activeTab, setActiveTab] = useState<'overview' | 'settings'>('overview')
+  const [paymentSettings, setPaymentSettings] = useState({
+    sandbox_mode: true,
+    paymongo_public_key: '',
+    paymongo_secret_key: '',
+    gcash_payout_number: ''
+  })
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+
   // Form states for creating a new listing
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
@@ -94,6 +106,17 @@ export default function PosterDashboard() {
 
       setUser(user)
 
+      // Fetch user profile settings
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('payment_settings')
+        .eq('id', user.id)
+        .single()
+      
+      if (profile?.payment_settings) {
+        setPaymentSettings(prev => ({ ...prev, ...profile.payment_settings }))
+      }
+
       const { data, error } = await supabase
         .from('listings')
         .select(`
@@ -127,6 +150,45 @@ export default function PosterDashboard() {
   useEffect(() => {
     fetchUserAndListings()
   }, [fetchUserAndListings])
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (hash === 'settings') {
+        setActiveTab('settings')
+      } else {
+        setActiveTab('overview')
+      }
+    }
+    
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    
+    setSettingsSaving(true)
+    setSettingsSuccess(null)
+    setSettingsError(null)
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ payment_settings: paymentSettings })
+        .eq('id', user.id)
+        
+      if (error) throw error
+      setSettingsSuccess('Payment settings updated successfully!')
+    } catch (err: any) {
+      console.error(err)
+      setSettingsError(err.message || 'Failed to update payment settings.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
 
   // Escrow Calculations: Total locked funds across active (non-released, non-expired) listings
   const calculateEscrowFunds = () => {
@@ -438,6 +500,110 @@ export default function PosterDashboard() {
               Retry
             </button>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (activeTab === 'settings') {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 select-none">Poster Settings</h1>
+            <p className="text-sm text-gray-500 font-medium">Manage sandbox credentials and GCash mock payout options.</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-[12px] p-6 max-w-2xl shadow-sm">
+          <form onSubmit={handleSaveSettings} className="space-y-6">
+            {settingsSuccess && (
+              <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3 py-2 rounded-[8px]">
+                <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{settingsSuccess}</span>
+              </div>
+            )}
+            {settingsError && (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px]">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{settingsError}</span>
+              </div>
+            )}
+
+            {/* Sandbox Mode Switch */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div>
+                <label className="text-sm font-bold text-gray-900 block">Sandbox Mode</label>
+                <span className="text-xs text-gray-500">Enable GCash/PayMongo mock simulations without processing real API operations.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentSettings(prev => ({ ...prev, sandbox_mode: !prev.sandbox_mode }))}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  paymentSettings.sandbox_mode ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    paymentSettings.sandbox_mode ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* PayMongo API credentials */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-gray-900">PayMongo Sandbox Keys</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Public Key</label>
+                  <input
+                    type="text"
+                    value={paymentSettings.paymongo_public_key}
+                    onChange={e => setPaymentSettings(prev => ({ ...prev, paymongo_public_key: e.target.value }))}
+                    placeholder="pk_test_..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white text-gray-800 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Secret Key</label>
+                  <input
+                    type="password"
+                    value={paymentSettings.paymongo_secret_key}
+                    onChange={e => setPaymentSettings(prev => ({ ...prev, paymongo_secret_key: e.target.value }))}
+                    placeholder="sk_test_..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white text-gray-800 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Payout configuration */}
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Payout Configuration</h3>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">GCash Payout Number</label>
+                <input
+                  type="text"
+                  value={paymentSettings.gcash_payout_number}
+                  onChange={e => setPaymentSettings(prev => ({ ...prev, gcash_payout_number: e.target.value }))}
+                  placeholder="e.g. 09171234567"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white text-gray-800 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                type="submit"
+                disabled={settingsSaving}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[8px] text-sm transition-all disabled:opacity-50"
+              >
+                {settingsSaving ? 'Saving Settings...' : 'Save Settings'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     )

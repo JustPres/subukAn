@@ -254,12 +254,28 @@ export async function POST(request: NextRequest) {
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(submission.tester_id);
     const testerPhone = authUser?.user?.phone || '09171234567'; // Fallback to mock PH phone for testing if phone is blank
 
+    // Fetch poster profile details to retrieve payment_settings
+    let customSettings = null;
+    try {
+      const { data: posterProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('payment_settings')
+        .eq('id', listing.poster_id)
+        .single();
+      if (posterProfile?.payment_settings) {
+        customSettings = posterProfile.payment_settings;
+      }
+    } catch (e) {
+      console.warn('Failed to fetch poster profile customSettings:', e);
+    }
+
     try {
       const payoutResult = await processGCashPayout({
         submissionId: submission_id,
         amount,
         phoneNumber: testerPhone,
         idempotencyKey,
+        customSettings,
       });
 
       if (payoutResult.status === 'completed') {

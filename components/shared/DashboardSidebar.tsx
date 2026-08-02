@@ -10,7 +10,8 @@ import {
   DollarSign, 
   ArrowLeftRight, 
   LogOut, 
-  X 
+  X,
+  Settings
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 
@@ -38,6 +39,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
   if (isPoster) {
     links.push({ name: 'Dashboard Overview', href: '/dashboard/poster', icon: LayoutDashboard })
     links.push({ name: 'My Listings', href: '/dashboard/poster#listings', icon: FileText })
+    links.push({ name: 'Settings', href: '/dashboard/poster#settings', icon: Settings })
   } else if (isTester) {
     links.push({ name: 'Available Tasks', href: '/dashboard/tester', icon: LayoutDashboard })
     links.push({ name: 'My Submissions', href: '/dashboard/tester#submissions', icon: CheckSquare })
