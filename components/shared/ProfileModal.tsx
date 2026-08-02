@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { UserProfile, NotificationSettings } from '@/types'
-import { User, Bell, Check, X, Shield, Smartphone, MapPin, Briefcase, Laptop } from 'lucide-react'
+import { User, Bell, Check, X, Shield, Smartphone, MapPin, Briefcase, Laptop, AlertCircle } from 'lucide-react'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -30,6 +30,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [activeTab, setActiveTab] = useState<'demographics' | 'notifications'>('demographics')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     if (profile) {
@@ -90,9 +91,9 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
         setSaveSuccess(false)
         onClose()
       }, 1000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update profile:', error)
-      alert('Failed to update profile settings.')
+      setErrorMsg(error?.message || 'Failed to update profile settings. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -148,6 +149,13 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+          {errorMsg && (
+            <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px]">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {activeTab === 'demographics' && (
             <div className="space-y-4">
               {/* Age Range & Gender */}

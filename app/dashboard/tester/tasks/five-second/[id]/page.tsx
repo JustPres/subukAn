@@ -112,6 +112,7 @@ export default function FiveSecondTestWorkspace() {
   const [newCommentText, setNewCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchComments = useCallback(async (submissionId: string) => {
     if (!submissionId) return;
@@ -594,6 +595,7 @@ export default function FiveSecondTestWorkspace() {
 
   const submitResponses = async (finalStatus: 'pending_review' | 'expired') => {
     if (!submission || !listing || !tasks) return;
+    setActionError(null);
 
     setSubmitting(true);
     try {
@@ -661,7 +663,7 @@ export default function FiveSecondTestWorkspace() {
       setCurrentStep(finalStatus === 'pending_review' ? 'pending_review' : 'expired');
     } catch (err: any) {
       console.error('Submission failed:', err);
-      alert(err.message || 'An error occurred while saving your testing responses.');
+      setActionError(err.message || 'An error occurred while saving your testing responses.');
     } finally {
       setSubmitting(false);
     }
@@ -1069,6 +1071,12 @@ export default function FiveSecondTestWorkspace() {
                 </p>
               </div>
 
+              {actionError && (
+                <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px] mb-4 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{actionError}</span>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-6">
                   {tasks.map((task, index) => {

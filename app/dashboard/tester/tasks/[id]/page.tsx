@@ -106,6 +106,7 @@ export default function TaskWorkspacePage() {
   const [newCommentText, setNewCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Native media tracks refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -578,19 +579,20 @@ export default function TaskWorkspacePage() {
 
   // Upload handler for both screen recordings and image files
   const uploadMediaFile = async (taskId: string, fileOrBlob: Blob | File, fileType: string, defaultFilename: string) => {
+    setActionError(null);
     try {
       const fileSize = fileOrBlob.size;
       const filename = fileOrBlob instanceof File ? fileOrBlob.name : defaultFilename;
       
       const MAX_SIZE_BYTES = 100 * 1024 * 1024;
       if (fileSize > MAX_SIZE_BYTES) {
-        alert('File size exceeds the 100MB limit. Select a smaller file.');
+        setActionError('File size exceeds the 100MB limit. Select a smaller file.');
         return;
       }
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('Unauthorized: Session not found. Log in again.');
+        setActionError('Unauthorized: Session not found. Log in again.');
         return;
       }
       
@@ -647,18 +649,19 @@ export default function TaskWorkspacePage() {
       }));
     } catch (err: any) {
       console.error('File upload failed:', err);
-      alert('Upload failed: ' + err.message);
+      setActionError('Upload failed: ' + err.message);
     }
   };
 
   // Image input select handler
   const handleImageSelect = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    setActionError(null);
     const file = e.target.files?.[0];
     if (!file) return;
     
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file format. Only PNG, JPEG, JPG are permitted.');
+      setActionError('Invalid file format. Only PNG, JPEG, JPG are permitted.');
       return;
     }
     
@@ -715,6 +718,7 @@ export default function TaskWorkspacePage() {
 
   const submitResponses = async (finalStatus: 'pending_review' | 'expired') => {
     if (!submission || !listing || !tasks) return;
+    setActionError(null);
     
     setSubmitting(true);
     try {
@@ -779,7 +783,7 @@ export default function TaskWorkspacePage() {
       setCurrentStep(finalStatus === 'pending_review' ? 'pending_review' : 'expired');
     } catch (err: any) {
       console.error('Submission failed:', err);
-      alert(err.message || 'An error occurred while saving your testing responses.');
+      setActionError(err.message || 'An error occurred while saving your testing responses.');
     } finally {
       setSubmitting(false);
     }
@@ -1032,6 +1036,12 @@ export default function TaskWorkspacePage() {
               )}
 
               {/* Task Checklist form */}
+              {actionError && (
+                <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px] mb-4">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{actionError}</span>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <h2 className="text-lg font-bold mb-4 flex items-center gap-2 select-none">
