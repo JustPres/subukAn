@@ -80,9 +80,9 @@ export function NotificationCenter() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (!error && Array.isArray(data)) {
+      if (!error && Array.isArray(data) && data.length > 0) {
         setNotifications(data as Notification[])
-      } else if (error) {
+      } else {
         setNotifications(DEFAULT_NOTIFICATIONS)
       }
     } catch (e) {
