@@ -11,7 +11,9 @@ import {
   AlertCircle,
   FileText,
   HelpCircle,
-  Check
+  Check,
+  Copy,
+  Download
 } from 'lucide-react'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { createBrowserClient } from '@/lib/supabase/client'
@@ -22,6 +24,7 @@ interface Listing {
   poster_id: string;
   title: string;
   description: string;
+  site_url: string;
   rate_per_tester: number;
   slots_count: number;
   slots_filled: number;
@@ -46,6 +49,7 @@ export default function PosterDashboard() {
   // Form states for creating a new listing
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
+  const [formSiteUrl, setFormSiteUrl] = useState('')
   const [formRate, setFormRate] = useState<number>(200)
   const [formSlots, setFormSlots] = useState<number>(5)
   const [formReviewWindow, setFormReviewWindow] = useState<30 | 60>(30)
@@ -167,6 +171,7 @@ export default function PosterDashboard() {
     const inputData = {
       title: formTitle,
       description: formDescription,
+      site_url: formSiteUrl || undefined,
       rate_per_tester: formRate,
       slots_count: formSlots,
       total_budget: formRate * formSlots,
@@ -205,6 +210,7 @@ export default function PosterDashboard() {
           poster_id: user.id,
           title: formTitle,
           description: formDescription,
+          site_url: formSiteUrl || null,
           rate_per_tester: formRate,
           slots_count: formSlots,
           total_budget: formRate * formSlots,
@@ -251,6 +257,7 @@ export default function PosterDashboard() {
       // 3. Reset form
       setFormTitle('')
       setFormDescription('')
+      setFormSiteUrl('')
       setFormRate(200)
       setFormSlots(5)
       setFormReviewWindow(30)
@@ -284,7 +291,7 @@ export default function PosterDashboard() {
     }
   }
 
-  // Get color badges for database statuses ('open', 'filling', 'review', 'released', 'expired')
+  // Get color badges for database statuses ('open', 'filling', 'review', 'released', 'rejected', 'expired')
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'open':
@@ -311,13 +318,86 @@ export default function PosterDashboard() {
             Payment Released
           </span>
         )
-      default:
+      case 'rejected':
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-red-100 text-red-800 border border-red-200">
+            Rejected
+          </span>
+        )
+      case 'expired':
         return (
           <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-gray-100 text-gray-800 border border-gray-200">
             Expired
           </span>
         )
+      default:
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-gray-100 text-gray-600 border border-gray-200">
+            {status || 'Unknown'}
+          </span>
+        )
     }
+  }
+
+  // Duplicate listing: pre-fill the creation modal with an existing listing's data
+  const handleDuplicateListing = (listing: Listing) => {
+    setFormTitle(`${listing.title} (Copy)`)
+    setFormDescription(listing.description)
+    setFormSiteUrl(listing.site_url || '')
+    setFormRate(listing.rate_per_tester)
+    setFormSlots(listing.slots_count)
+    setFormReviewWindow(listing.review_window_minutes)
+    setCheckoutUrl(null)
+    setErrors({})
+    setSubmitError(null)
+    setIsModalOpen(true)
+  }
+
+  // Generate and download a spend receipt for a listing
+  const handleDownloadReceipt = (listing: Listing) => {
+    const receiptDate = new Date().toISOString().split('T')[0]
+    const createdDate = formatDate(listing.created_at)
+    const statusLabel = listing.status.charAt(0).toUpperCase() + listing.status.slice(1)
+    const amountPaid = listing.status === 'released' ? listing.total_budget : 0
+
+    const receiptContent = [
+      '═══════════════════════════════════════════',
+      '           subukAn — Spend Receipt         ',
+      '═══════════════════════════════════════════',
+      '',
+      `Receipt Date:      ${receiptDate}`,
+      `Listing ID:        ${listing.id}`,
+      `Listing Title:     ${listing.title}`,
+      `Created:           ${createdDate}`,
+      '',
+      '───────────────────────────────────────────',
+      '  Financial Summary',
+      '───────────────────────────────────────────',
+      '',
+      `Rate per Tester:   ₱${listing.rate_per_tester}`,
+      `Total Slots:       ${listing.slots_count}`,
+      `Slots Filled:      ${listing.slots_filled}`,
+      `Escrow Budget:     ₱${listing.total_budget.toLocaleString()}`,
+      `Amount Paid Out:   ₱${amountPaid.toLocaleString()}`,
+      `Listing Status:    ${statusLabel}`,
+      '',
+      '───────────────────────────────────────────',
+      '',
+      'This receipt is generated for record-keeping purposes.',
+      'For disputes or questions, contact support@subukan.ph',
+      '',
+      '═══════════════════════════════════════════',
+    ].join('\n')
+
+    const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `subukan-receipt-${listing.id.slice(0, 8)}-${receiptDate}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const formatDate = (dateString: string) => {
@@ -439,6 +519,7 @@ export default function PosterDashboard() {
                     <th className="p-4">Escrow Total</th>
                     <th className="p-4">Status</th>
                     <th className="p-4">Created Date</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
@@ -459,6 +540,26 @@ export default function PosterDashboard() {
                       <td className="p-4 text-gray-500 font-medium">₱{listing.total_budget}</td>
                       <td className="p-4">{getStatusBadge(listing.status)}</td>
                       <td className="p-4 text-gray-500">{formatDate(listing.created_at)}</td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicateListing(listing)}
+                            title="Duplicate listing"
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-[6px] transition-colors"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadReceipt(listing)}
+                            title="Download receipt"
+                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-[6px] transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -542,6 +643,18 @@ export default function PosterDashboard() {
                     placeholder="e.g., Rider App Map Pin Accuracy Review"
                     className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
                     required
+                  />
+                </div>
+
+                {/* Site URL */}
+                <div>
+                  <label className="block text-sm font-bold mb-1 text-gray-700">Site URL</label>
+                  <input
+                    type="url"
+                    value={formSiteUrl}
+                    onChange={e => setFormSiteUrl(e.target.value)}
+                    placeholder="https://example.com — the site testers will visit"
+                    className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 text-sm"
                   />
                 </div>
 

@@ -16,10 +16,11 @@ import {
   Loader2,
   Star,
   ExternalLink,
-  X,
   Check,
   ShieldAlert,
-  AlertTriangle
+  AlertTriangle,
+  Paperclip,
+  X
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
@@ -130,6 +131,10 @@ export default function SubmissionReviewPage({ params }: PageProps) {
   
   const [isRejecting, setIsRejecting] = useState(false)
   const [rejectError, setRejectError] = useState<string | null>(null)
+  
+  const [rejectionAttachment, setRejectionAttachment] = useState<File | null>(null)
+  const [rejectionAttachmentPreview, setRejectionAttachmentPreview] = useState<string | null>(null)
+  const [rejectionAttachmentError, setRejectionAttachmentError] = useState<string | null>(null)
   
   // Live Countdown state
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
@@ -440,6 +445,16 @@ export default function SubmissionReviewPage({ params }: PageProps) {
     }
   }
 
+  const handleCloseRejectModal = () => {
+    setIsRejectModalOpen(false)
+    setRejectionReason('')
+    setRejectionExplanation('')
+    setRejectionAttachment(null)
+    setRejectionAttachmentPreview(null)
+    setRejectionAttachmentError(null)
+    setRejectError(null)
+  }
+
   // Rejection Flow Trigger (Updates submission status & fields in Supabase)
   const handleRejectSubmission = async () => {
     if (!rejectionReason || !rejectionExplanation) {
@@ -460,14 +475,20 @@ export default function SubmissionReviewPage({ params }: PageProps) {
     setIsRejecting(true)
     setRejectError(null)
     try {
+      const updateData: any = {
+        status: 'rejected',
+        rejection_reason: rejectionReason,
+        rejection_explanation: rejectionExplanation.trim(),
+        review_completed_at: new Date().toISOString()
+      }
+      
+      if (rejectionAttachment) {
+        updateData.rejection_attachment = rejectionAttachment.name
+      }
+
       const { error: updateError } = await supabase
         .from('submissions')
-        .update({
-          status: 'rejected',
-          rejection_reason: rejectionReason,
-          rejection_explanation: rejectionExplanation.trim(),
-          review_completed_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', submissionId)
 
       if (updateError) {
@@ -483,9 +504,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
         review_completed_at: new Date().toISOString()
       } : null)
 
-      setIsRejectModalOpen(false)
-      setRejectionReason('')
-      setRejectionExplanation('')
+      handleCloseRejectModal()
     } catch (err: any) {
       console.error('Rejection submission error:', err)
       setRejectError(err.message || 'Failed to submit rejection status.')
@@ -1149,7 +1168,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                 <XCircle className="w-5 h-5 text-rose-600" /> Reject Submission Evidence
               </h4>
               <button
-                onClick={() => setIsRejectModalOpen(false)}
+                onClick={handleCloseRejectModal}
                 className="text-gray-400 hover:text-gray-600 text-xl font-bold"
               >
                 &times;
@@ -1213,13 +1232,79 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                   Must be between 10 and 500 characters.
                 </span>
               </div>
+
+              {/* Rejection Attachment input */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                  Attach Voice/Video Explanation (Optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="audio/*,video/*"
+                    onChange={(e) => {
+                      setRejectionAttachmentError(null);
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      
+                      if (file.size > 25 * 1024 * 1024) {
+                        setRejectionAttachmentError('File must be under 25MB');
+                        e.target.value = '';
+                        return;
+                      }
+                      
+                      setRejectionAttachment(file);
+                      setRejectionAttachmentPreview(`${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+                    }}
+                    className="hidden"
+                    id="rejection-attachment-upload"
+                  />
+                  {!rejectionAttachment ? (
+                    <label
+                      htmlFor="rejection-attachment-upload"
+                      className="flex items-center justify-center gap-2 w-full p-2.5 border border-gray-200 border-dashed rounded-[8px] text-sm text-gray-500 hover:bg-gray-50 cursor-pointer bg-white transition-colors"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      <span>Select Audio or Video File</span>
+                    </label>
+                  ) : (
+                    <div className="flex items-center justify-between p-2.5 border border-gray-200 rounded-[8px] bg-gray-50">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 truncate">{rejectionAttachmentPreview}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRejectionAttachment(null);
+                          setRejectionAttachmentPreview(null);
+                          setRejectionAttachmentError(null);
+                          const input = document.getElementById('rejection-attachment-upload') as HTMLInputElement;
+                          if (input) input.value = '';
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded-full text-gray-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {rejectionAttachmentError && (
+                  <span className="text-[10px] text-rose-500 font-bold block mt-1">
+                    {rejectionAttachmentError}
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-400 block mt-1">
+                  Max file size: 25MB
+                </span>
+              </div>
             </div>
 
             {/* Modal Footer */}
             <div className="p-4 border-t flex justify-end gap-3 bg-gray-50">
               <button
                 type="button"
-                onClick={() => setIsRejectModalOpen(false)}
+                onClick={handleCloseRejectModal}
                 disabled={isRejecting}
                 className="px-4 py-2 border border-gray-200 text-gray-700 bg-white hover:bg-gray-100 rounded-[6px] text-sm font-semibold disabled:opacity-50"
               >

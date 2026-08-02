@@ -17,11 +17,11 @@ Next.js (App Router), React, TypeScript, Tailwind CSS, Supabase (Auth, RLS, DB),
 | 1 | M1: Exploration & Audit | Analyze codebase, UI components, submission DB queries, 08-FEATURES.md gaps | None | DONE |
 | 2 | M2: R1 Claim Button UI | Implement dynamic state-aware claim buttons in tester dashboard | M1 | DONE |
 | 3 | M3: R2 Task Workspace UI | Implement distinct submission status screens in task workspaces | M1 | DONE |
-| 4 | M4: R3 Feature Gaps | Implement identified gaps (notifications, profile info, cash-out balance) | M1 | PLANNED |
+| 4 | M4: R3 Feature Gaps | Implement identified gaps (notifications, profile info, cash-out balance) | M1 | DONE |
 | 5 | M5: Verification & Audit | Clean build, unit tests, E2E tests, Forensic Integrity Audit | M2, M3, M4 | PLANNED |
 
 ## Interface Contracts
 ### Tester Dashboard ↔ Submissions DB
-- Submissions table contains `status`: `'in_progress' | 'pending_review' | 'approved' | 'rejected'`.
-- Submissions table contains `rejection_reason` / `rejection_category` / `rejection_explanation` (or equivalent columns).
+- Submissions table contains `status`: `'in_progress' | 'pending_review' | 'approved' | 'rejected' | 'disputed'`.
+- Submissions table contains `rejection_reason` / `rejection_category` / `rejection_explanation` / `dispute_reason` / `dispute_explanation`.
 - Listing claim button checks user's submission state for that specific listing ID and slot availability.

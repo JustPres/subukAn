@@ -32,6 +32,7 @@ interface MockListing {
   poster_id?: string;
   title?: string;
   description?: string;
+  site_url?: string;
   rate_per_tester?: number;
   slots_count?: number;
   total_budget?: number;

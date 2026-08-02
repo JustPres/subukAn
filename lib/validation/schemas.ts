@@ -12,6 +12,11 @@ export const createListingSchema = z.object({
     .min(20, { message: 'Description must be at least 20 characters long.' })
     .max(2000, { message: 'Description cannot exceed 2000 characters.' }),
   
+  site_url: z.string()
+    .url({ message: 'Site URL must be a valid URL (e.g. https://example.com).' })
+    .optional()
+    .or(z.literal('')),
+  
   rate_per_tester: z.number({
     required_error: 'Please select a rate per tester.',
     invalid_type_error: 'Rate per tester must be a number.',
