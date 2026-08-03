@@ -1,4 +1,4 @@
-export type SubmissionStatus = 'in_progress' | 'pending_review' | 'approved' | 'rejected' | null;
+export type SubmissionStatus = 'in_progress' | 'pending_review' | 'approved' | 'rejected' | 'expired' | null;
 
 export interface JobListing {
   id: string;
@@ -59,6 +59,13 @@ export function getButtonConfig(job: JobListing): ButtonConfig {
         className: 'border-2 border-rose-600 text-rose-700 hover:bg-rose-50 bg-white shadow-sm font-bold',
         href: targetUrl,
         disabled: false
+      };
+    case 'expired':
+      return {
+        text: 'Expired / Forfeited',
+        className: 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 pointer-events-none',
+        href: '#',
+        disabled: true
       };
     default:
       if (job.slots_filled >= job.slots_count) {

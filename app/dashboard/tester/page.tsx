@@ -367,7 +367,7 @@ export default function TesterDashboard() {
 
         const mapped = (listingsData || []).map((listing: any) => {
           const firstTask = listing.tasks?.[0]
-          const userSub = userSubmissions.find((s) => s.listing_id === listing.id && s.status !== 'expired')
+          const userSub = userSubmissions.find((s) => s.listing_id === listing.id)
           const userSubmissionStatus = (userSub ? userSub.status : null) as any
 
           return {

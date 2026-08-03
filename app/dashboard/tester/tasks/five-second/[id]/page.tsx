@@ -35,6 +35,7 @@ interface Listing {
   review_window_minutes: number;
   status: string;
   variants?: any[];
+  site_url?: string;
 }
 
 interface Task {
@@ -86,6 +87,9 @@ export default function FiveSecondTestWorkspace() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submission, setSubmission] = useState<any>(null);
+
+  const initStarted = useRef(false);
+  const popupRef = useRef<Window | null>(null);
 
   // Steps: 'loading' | 'unauthorized' | 'agreement' | 'cover' | 'viewing' | 'questionnaire' | 'submitted' | 'expired' | 'error'
   const [currentStep, setCurrentStep] = useState<string>('loading');
@@ -191,6 +195,8 @@ export default function FiveSecondTestWorkspace() {
   // Initialize Page & Claim Slot
   useEffect(() => {
     if (!id) return;
+    if (initStarted.current) return;
+    initStarted.current = true;
 
     const initWorkspace = async () => {
       try {
@@ -441,6 +447,14 @@ export default function FiveSecondTestWorkspace() {
     if (currentStep !== 'viewing') return;
 
     if (viewTimeLeft <= 0) {
+      if (popupRef.current) {
+        try {
+          popupRef.current.close();
+        } catch (e) {
+          console.warn('Failed to close popup:', e);
+        }
+        popupRef.current = null;
+      }
       setCurrentStep('questionnaire');
       return;
     }
@@ -462,6 +476,17 @@ export default function FiveSecondTestWorkspace() {
 
     return () => clearInterval(interval);
   }, [submission, currentStep, fetchComments]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (popupRef.current) {
+        try {
+          popupRef.current.close();
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   // NDA modal handlers
   const handleAcceptAgreement = () => {
@@ -959,6 +984,14 @@ export default function FiveSecondTestWorkspace() {
                   type="button"
                   disabled={!imageLoaded}
                   onClick={() => {
+                    if (listing?.site_url) {
+                      try {
+                        const win = window.open(listing.site_url, '_blank');
+                        popupRef.current = win;
+                      } catch (err) {
+                        console.error('Failed to open test site:', err);
+                      }
+                    }
                     setViewTimeLeft(timedDisplaySeconds);
                     setCurrentStep('viewing');
                     setViewStartTimestamp(Date.now());

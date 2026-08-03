@@ -112,6 +112,7 @@ export default function TaskWorkspacePage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const initStarted = useRef(false);
 
   // Post-Test Debrief Threading
   const fetchComments = useCallback(async (submissionId: string) => {
@@ -191,6 +192,8 @@ export default function TaskWorkspacePage() {
   // 3. Page initialization & Slot claiming
   useEffect(() => {
     if (!id) return;
+    if (initStarted.current) return;
+    initStarted.current = true;
     
     const initWorkspace = async () => {
       try {
