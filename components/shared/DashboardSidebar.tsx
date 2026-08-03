@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { 
   LayoutDashboard, 
   FileText, 
@@ -24,6 +24,8 @@ interface SidebarProps {
 export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const currentTab = searchParams.get('tab') || ''
   const supabase = createBrowserClient()
 
   const handleLogout = async () => {
@@ -37,13 +39,13 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
   const links = []
 
   if (isPoster) {
-    links.push({ name: 'Dashboard Overview', href: '/dashboard/poster', icon: LayoutDashboard })
-    links.push({ name: 'My Listings', href: '/dashboard/poster#listings', icon: FileText })
-    links.push({ name: 'Settings', href: '/dashboard/poster#settings', icon: Settings })
+    links.push({ name: 'Dashboard Overview', href: '/dashboard/poster?tab=overview', icon: LayoutDashboard })
+    links.push({ name: 'My Listings', href: '/dashboard/poster?tab=listings', icon: FileText })
+    links.push({ name: 'Settings', href: '/dashboard/poster?tab=settings', icon: Settings })
   } else if (isTester) {
-    links.push({ name: 'Available Tasks', href: '/dashboard/tester', icon: LayoutDashboard })
-    links.push({ name: 'My Submissions', href: '/dashboard/tester#submissions', icon: CheckSquare })
-    links.push({ name: 'Earnings', href: '/dashboard/tester#earnings', icon: DollarSign })
+    links.push({ name: 'Available Tasks', href: '/dashboard/tester?tab=available', icon: LayoutDashboard })
+    links.push({ name: 'My Submissions', href: '/dashboard/tester?tab=submissions', icon: CheckSquare })
+    links.push({ name: 'Earnings', href: '/dashboard/tester?tab=earnings', icon: DollarSign })
   }
 
   return (
@@ -75,8 +77,18 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
           {links.map((link) => {
             const Icon = link.icon
-            // Active logic: for hash links, it's tricky, but base path match is fine for now
-            const isActive = pathname === link.href.split('#')[0] && !link.href.includes('#')
+            const baseHref = link.href.split('?')[0]
+            const isPathMatching = pathname === baseHref
+            
+            const linkParams = new URLSearchParams(link.href.split('?')[1] || '')
+            const linkTab = linkParams.get('tab')
+            
+            const isActive = isPathMatching && (
+              (!linkTab && (!currentTab || currentTab === 'overview' || currentTab === 'available')) ||
+              (linkTab === 'overview' && (!currentTab || currentTab === 'overview')) ||
+              (linkTab === 'available' && (!currentTab || currentTab === 'available')) ||
+              (linkTab === currentTab)
+            )
             
             return (
               <Link 

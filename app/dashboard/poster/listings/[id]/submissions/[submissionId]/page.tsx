@@ -20,7 +20,9 @@ import {
   ShieldAlert,
   AlertTriangle,
   Paperclip,
-  X
+  X,
+  Search,
+  ClipboardList
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
@@ -643,8 +645,8 @@ export default function SubmissionReviewPage({ params }: PageProps) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between border-b border-gray-200 pb-6 mb-8 gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-3xl">🔍</span>
+          <div className="flex items-center gap-2 mb-2">
+            <Search className="w-8 h-8 text-gray-700" />
             <h1 className="text-3xl font-extrabold tracking-tight">Review Tester Submission</h1>
           </div>
           <p className="text-gray-500 text-sm mt-1">
@@ -736,7 +738,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
           {/* Task Responses List */}
           <div className="space-y-6">
             <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
-              📋 Step Responses & Evidence ({responses.length})
+              <ClipboardList className="w-5 h-5 text-gray-600" /> Step Responses & Evidence ({responses.length})
             </h2>
 
             {responses.length === 0 ? (

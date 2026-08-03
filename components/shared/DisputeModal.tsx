@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShieldAlert, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ShieldAlert, X, AlertCircle, CheckCircle2, Scale } from 'lucide-react'
 import { DISPUTE_REASON_LABELS } from '@/lib/utils/workspace-status'
 
 interface DisputeModalProps {
@@ -56,7 +56,7 @@ export function DisputeModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-[16px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-fadeIn">
+      <div className="bg-white rounded-[16px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         {/* Header */}
         <div className="p-6 border-b border-rose-100 bg-rose-50/60 flex items-start justify-between">
           <div className="flex items-start gap-3">
@@ -80,7 +80,7 @@ export function DisputeModal({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {success ? (
             <div className="text-center py-6 space-y-3">
               <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-200">
@@ -94,7 +94,9 @@ export function DisputeModal({
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-[8px] p-3 text-xs text-amber-900 leading-relaxed">
-                <span className="font-bold block mb-1">⚖️ Fair Dispute Policy</span>
+                <span className="font-bold flex items-center gap-1 mb-1">
+                  <Scale className="w-3.5 h-3.5 text-amber-700 inline" /> Fair Dispute Policy
+                </span>
                 Disputes are reviewed by subukAn support. Provide clear details explaining why your completed work satisfied the task requirements.
               </div>
 

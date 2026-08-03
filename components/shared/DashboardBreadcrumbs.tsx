@@ -32,21 +32,24 @@ export function DashboardBreadcrumbs() {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 flex items-center space-x-2 text-sm text-slate">
+    <nav aria-label="Breadcrumb" className="mb-4 flex items-center space-x-2 text-sm text-slate select-none">
       {segments.map((segment, index) => {
         const isLast = index === segments.length - 1
         const href = `/${segments.slice(0, index + 1).join('/')}`
         const label = getLabel(segment)
 
+        const unclickableSegments = new Set(['tasks', 'listings', 'five-second'])
+        const isClickable = !isLast && !unclickableSegments.has(segment)
+
         return (
           <React.Fragment key={href}>
             {index > 0 && <ChevronRight className="h-4 w-4 text-steel" />}
-            {isLast ? (
-              <span className="font-medium text-ink">{label}</span>
-            ) : (
+            {isClickable ? (
               <Link href={href} className="hover:text-primary-brand transition-colors">
                 {label}
               </Link>
+            ) : (
+              <span className={isLast ? "font-medium text-ink" : "text-slate"}>{label}</span>
             )}
           </React.Fragment>
         )

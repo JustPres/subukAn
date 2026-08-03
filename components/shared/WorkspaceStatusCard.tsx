@@ -77,7 +77,7 @@ export function WorkspaceStatusCard({ submission, listing, onDisputeSubmitted }:
         </div>
         <div>
           <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider inline-block mb-2">
-            ✅ Task Approved! Payout Credited
+            Task Approved! Payout Credited
           </span>
           <h2 className="text-xl font-black text-gray-900">{statusInfo.title}</h2>
           <p className="text-xs text-gray-500 mt-1.5 leading-relaxed font-medium">
@@ -123,7 +123,7 @@ export function WorkspaceStatusCard({ submission, listing, onDisputeSubmitted }:
         </div>
         <div className="text-center">
           <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-amber-100 text-amber-900 uppercase tracking-wider inline-block mb-2">
-            ⚖️ Dispute Under Review
+            Dispute Under Review
           </span>
           <h2 className="text-xl font-black text-gray-900">{statusInfo.title}</h2>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -177,7 +177,7 @@ export function WorkspaceStatusCard({ submission, listing, onDisputeSubmitted }:
           </div>
           <div className="text-center">
             <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-rose-100 text-rose-800 uppercase tracking-wider inline-block mb-2">
-              ❌ Submission Rejected
+              Submission Rejected
             </span>
             <h2 className="text-xl font-black text-gray-900">{statusInfo.title}</h2>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -269,7 +269,7 @@ export function WorkspaceStatusCard({ submission, listing, onDisputeSubmitted }:
       </div>
       <div>
         <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-amber-100 text-amber-800 uppercase tracking-wider inline-block mb-2">
-          ⏳ Submission Under Review
+          Submission Under Review
         </span>
         <h2 className="text-xl font-black text-gray-900">{statusInfo.title}</h2>
         <p className="text-xs text-gray-500 mt-1.5 leading-relaxed font-medium">

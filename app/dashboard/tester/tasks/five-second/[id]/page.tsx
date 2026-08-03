@@ -15,7 +15,9 @@ import {
   Lock,
   Loader2,
   Info,
-  Send
+  Send,
+  Zap,
+  FileText
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { AgreementModal } from '@/components/shared/AgreementModal'
@@ -895,8 +897,8 @@ export default function FiveSecondTestWorkspace() {
 
             <div className="p-8 space-y-6">
               <div className="border-b border-gray-100 pb-5">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md inline-block mb-3">
-                  ⚡ Five-Second Impression Test
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md inline-flex items-center gap-1 mb-3">
+                  <Zap className="w-3.5 h-3.5 text-blue-600" /> Five-Second Impression Test
                 </span>
                 <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-2 select-none">
                   {listing.title}
@@ -1093,8 +1095,8 @@ export default function FiveSecondTestWorkspace() {
 
             <div className="p-8 space-y-8">
               <div className="border-b border-gray-100 pb-5">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md inline-block mb-3">
-                  📝 Impression Questionnaire
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md inline-flex items-center gap-1 mb-3">
+                  <FileText className="w-3.5 h-3.5 text-emerald-600" /> Impression Questionnaire
                 </span>
                 <h1 className="text-3xl font-extrabold tracking-tight mb-2 select-none">
                   What do you remember about the design?

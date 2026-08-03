@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { 
   ArrowLeft, 
   Wallet, 
@@ -22,7 +23,11 @@ import {
   DollarSign,
   LayoutDashboard,
   CheckSquare,
-  Scale
+  Scale,
+  Smartphone,
+  User,
+  Zap,
+  Target
 } from 'lucide-react'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
@@ -123,11 +128,13 @@ By participating in this test, you agree to the following binding conditions:
 
 Scroll down and review all terms to accept.`
 
-export default function TesterDashboard() {
+function TesterDashboardContent() {
   const supabase = createBrowserClient()
 
   // Navigation tab state: 'available' | 'submissions' | 'earnings'
-  const [activeTab, setActiveTab] = useState<'available' | 'submissions' | 'earnings'>('available')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const activeTab = (searchParams.get('tab') as 'available' | 'submissions' | 'earnings') || 'available'
 
   // Profile and earnings states
   const [totalEarnings, setTotalEarnings] = useState(0)
@@ -170,27 +177,8 @@ export default function TesterDashboard() {
     listingTitle: ''
   })
 
-  // URL Hash Sync for Tab navigation
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '')
-      if (hash === 'submissions') {
-        setActiveTab('submissions')
-      } else if (hash === 'earnings') {
-        setActiveTab('earnings')
-      } else if (hash === 'available') {
-        setActiveTab('available')
-      }
-    }
-
-    handleHashChange()
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [])
-
   const switchTab = (tab: 'available' | 'submissions' | 'earnings') => {
-    setActiveTab(tab)
-    window.location.hash = tab
+    router.push(`/dashboard/tester?tab=${tab}`)
   }
 
   const fetchProfileAndListings = useCallback(async () => {
@@ -589,7 +577,7 @@ export default function TesterDashboard() {
           {/* Header Banner */}
           <div className="border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <span className="text-4xl mb-2 block">📱</span>
+              <Smartphone className="w-10 h-10 text-gray-700 mb-2" />
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Tester Workspace</h1>
               <p className="text-gray-500 text-sm mt-1">
                 Browse funded listings, claim testing slots, track your submissions, and withdraw earnings.
@@ -600,7 +588,8 @@ export default function TesterDashboard() {
               onClick={() => setIsProfileModalOpen(true)}
               className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-[10px] font-extrabold text-xs flex items-center gap-2 self-start md:self-auto transition-all shadow-xs"
             >
-              <span>👤 Profile & Notifications</span>
+              <User className="w-4 h-4" />
+              <span>Profile & Notifications</span>
             </button>
           </div>
 
@@ -707,13 +696,13 @@ export default function TesterDashboard() {
                           <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2 flex-wrap">
                             {job.title}
                             {job.is_quick_impression && (
-                              <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/60 px-1.5 py-0.5 rounded">
-                                ⚡ 5s
+                              <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/60 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <Zap className="w-2.5 h-2.5 text-amber-500" /> 5s
                               </span>
                             )}
                             {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
-                              <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded">
-                                🎯 Match
+                              <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <Target className="w-2.5 h-2.5 text-purple-500" /> Match
                               </span>
                             )}
                           </h3>
@@ -1034,5 +1023,13 @@ export default function TesterDashboard() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function TesterDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate">Loading workspace...</div>}>
+      <TesterDashboardContent />
+    </Suspense>
   )
 }

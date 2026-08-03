@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { 
   Plus, 
   Wallet, 
@@ -13,7 +14,9 @@ import {
   HelpCircle,
   Check,
   Copy,
-  Download
+  Download,
+  Briefcase,
+  AlertTriangle
 } from 'lucide-react'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { createBrowserClient } from '@/lib/supabase/client'
@@ -35,7 +38,7 @@ interface Listing {
   updated_at: string;
 }
 
-export default function PosterDashboard() {
+function PosterDashboardContent() {
   const supabase = createBrowserClient()
 
   // General state
@@ -47,7 +50,11 @@ export default function PosterDashboard() {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
   // Tab & Custom Payment Settings states
-  const [activeTab, setActiveTab] = useState<'overview' | 'settings'>('overview')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const tabParam = searchParams.get('tab') || 'overview'
+  const activeTab = (tabParam === 'settings') ? 'settings' : 'overview'
+
   const [paymentSettings, setPaymentSettings] = useState({
     sandbox_mode: true,
     paymongo_public_key: '',
@@ -152,19 +159,13 @@ export default function PosterDashboard() {
   }, [fetchUserAndListings])
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '')
-      if (hash === 'settings') {
-        setActiveTab('settings')
-      } else {
-        setActiveTab('overview')
+    if (tabParam === 'listings') {
+      const target = document.getElementById('listings-container')
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     }
-    
-    handleHashChange()
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [])
+  }, [tabParam])
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -618,7 +619,7 @@ export default function PosterDashboard() {
 
       {/* Page Header */}
       <div className="border-b border-gray-200 pb-6">
-        <span className="text-4xl mb-2 block">💼</span>
+        <Briefcase className="w-10 h-10 text-gray-700 mb-2" />
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Poster Workspace</h1>
         <p className="text-gray-500 text-sm mt-1">
           Fund testing rounds, review tester evidence, and release escrow payouts.
@@ -655,7 +656,7 @@ export default function PosterDashboard() {
       </div>
 
       {/* Listings Section */}
-      <div>
+      <div id="listings-container">
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
           <FileText className="w-5 h-5 text-gray-600" /> My Testing Listings
         </h2>
@@ -994,8 +995,11 @@ export default function PosterDashboard() {
                           className="w-20 p-1 border border-gray-200 rounded-[6px] text-xs focus:outline-none text-center bg-white"
                         />
                       </div>
-                      <p className="text-[11px] text-yellow-800 leading-normal">
-                        ⚠️ Testers will only have {impressionDurationSeconds} seconds to look at your site/image before it blurs. They cannot right-click or take manual screenshots.
+                      <p className="text-[11px] text-yellow-800 leading-normal flex items-start gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                        <span>
+                          Testers will only have {impressionDurationSeconds} seconds to look at your site/image before it blurs. They cannot right-click or take manual screenshots.
+                        </span>
                       </p>
                     </div>
                   )}
@@ -1222,5 +1226,13 @@ export default function PosterDashboard() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function PosterDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate">Loading workspace...</div>}>
+      <PosterDashboardContent />
+    </Suspense>
   )
 }
