@@ -358,44 +358,44 @@ export default function PosterDashboard() {
     switch (status) {
       case 'open':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-sky-100 text-sky-800 border border-sky-200">
-            Open / Funding
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-sky-500" /> Open / Funding
           </span>
         )
       case 'filling':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-yellow-100 text-yellow-800 border border-yellow-200">
-            Active (Slots Filling)
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-amber-500" /> Active (Slots Filling)
           </span>
         )
       case 'review':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-purple-100 text-purple-800 border border-purple-200">
-            Under Review
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-purple-500" /> Under Review
           </span>
         )
       case 'released':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-emerald-100 text-emerald-800 border border-emerald-200">
-            Payment Released
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-emerald-500" /> Payment Released
           </span>
         )
       case 'rejected':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-red-100 text-red-800 border border-red-200">
-            Rejected
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-rose-500" /> Rejected
           </span>
         )
       case 'expired':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-gray-100 text-gray-800 border border-gray-200">
-            Expired
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-gray-500" /> Expired
           </span>
         )
       default:
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-[8px] bg-gray-100 text-gray-600 border border-gray-200">
-            {status || 'Unknown'}
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span className="status-dot bg-gray-400" /> {status || 'Unknown'}
           </span>
         )
     }
@@ -610,20 +610,37 @@ export default function PosterDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-8 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
       {/* Back button */}
-      <Link href="/dashboard" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-900 mb-6 text-sm">
+      <Link href="/dashboard" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-900 text-sm">
         <ArrowLeft className="w-4 h-4" /> Back to Dashboard selection
       </Link>
 
-      {/* Notion-style Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-200 pb-6 mb-8">
-        <div>
-          <span className="text-4xl mb-2 block">💼</span>
-          <h1 className="text-4xl font-extrabold tracking-tight">Poster Workspace</h1>
-          <p className="text-gray-500 mt-2">
-            Fund testing rounds, review tester evidence, and release escrow payouts.
-          </p>
+      {/* Page Header */}
+      <div className="border-b border-gray-200 pb-6">
+        <span className="text-4xl mb-2 block">💼</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Poster Workspace</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          Fund testing rounds, review tester evidence, and release escrow payouts.
+        </p>
+      </div>
+
+      {/* Escrow Ledger Card (The One Loud Element) */}
+      <div className="bg-[#2955E3] text-white p-6 rounded-[20px] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <span className="text-xs text-white/70 font-semibold tracking-wider uppercase block">Total Escrow Funds Locked</span>
+          <span className="text-4xl font-black font-mono-numbers block">
+            ₱{calculateEscrowFunds().toLocaleString()}
+          </span>
+          <div className="flex items-center gap-3 text-xs text-white/80">
+            <span className="bg-white/20 text-white rounded-full px-2.5 py-0.5 font-bold uppercase text-[10px]">
+              PayMongo Account Verified
+            </span>
+            <span className="text-white/40">|</span>
+            <span className="font-medium font-mono-numbers">
+              {listings.filter(l => l.status !== 'released' && l.status !== 'expired').length} Active Listings
+            </span>
+          </div>
         </div>
         <button
           onClick={() => {
@@ -631,36 +648,10 @@ export default function PosterDashboard() {
             setErrors({})
             setIsModalOpen(true)
           }}
-          className="mt-4 md:mt-0 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-[8px] flex items-center gap-2 shadow-sm transition-all"
+          className="px-6 py-3 bg-white hover:bg-gray-100 text-[#2955E3] rounded-[8px] text-sm font-extrabold shadow-sm transition-colors whitespace-nowrap self-start md:self-center flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Create New Listing
         </button>
-      </div>
-
-      {/* Escrow Status Section (Restrained banking-style UI) */}
-      <div className="bg-white border border-gray-200 rounded-[12px] p-6 mb-8 shadow-sm">
-        <div className="flex items-center gap-3 mb-2">
-          <Wallet className="w-5 h-5 text-blue-600" />
-          <h2 className="font-bold text-lg text-gray-900">Escrow Security Ledger</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-          <div className="border-r border-gray-100 pr-4">
-            <span className="text-sm text-gray-500 block">Total Escrow Funds Locked</span>
-            <span className="text-3xl font-extrabold text-gray-900">₱{calculateEscrowFunds().toLocaleString()}</span>
-          </div>
-          <div className="border-r border-gray-100 pr-4">
-            <span className="text-sm text-gray-500 block">Active Listings</span>
-            <span className="text-3xl font-extrabold text-gray-900">
-              {listings.filter(l => l.status !== 'released' && l.status !== 'expired').length}
-            </span>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500 block">Payment Processor</span>
-            <span className="text-sm font-semibold text-blue-600 mt-2 block flex items-center gap-1">
-              PayMongo Account Verified
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Listings Section */}
@@ -678,35 +669,35 @@ export default function PosterDashboard() {
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-500 font-medium">
-                    <th className="p-4">Title</th>
-                    <th className="p-4">Slots</th>
-                    <th className="p-4">Rate per Tester</th>
-                    <th className="p-4">Escrow Total</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Created Date</th>
-                    <th className="p-4 text-right">Actions</th>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+                    <th className="p-3">Title</th>
+                    <th className="p-3">Slots</th>
+                    <th className="p-3">Rate per Tester</th>
+                    <th className="p-3">Escrow Total</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Created Date</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {listings.map(listing => (
-                    <tr key={listing.id} className="hover:bg-gray-50/55 transition-colors">
-                      <td className="p-4 font-bold text-gray-900">
+                    <tr key={listing.id} className="hover:bg-gray-50/55 transition-colors border-b border-gray-100 last:border-0">
+                      <td className="p-3 font-semibold text-gray-900 max-w-xs truncate">
                         <Link href={`/dashboard/poster/listings/${listing.id}`} className="hover:text-blue-600 hover:underline">
                           {listing.title}
                         </Link>
                       </td>
-                      <td className="p-4 text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          <span>{listing.slots_filled} / {listing.slots_count} filled</span>
+                      <td className="p-3 text-gray-600 font-mono-numbers">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-gray-400" />
+                          <span>{listing.slots_filled} / {listing.slots_count}</span>
                         </div>
                       </td>
-                      <td className="p-4 font-semibold text-gray-900">₱{listing.rate_per_tester}</td>
-                      <td className="p-4 text-gray-500 font-medium">₱{listing.total_budget}</td>
-                      <td className="p-4">{getStatusBadge(listing.status)}</td>
-                      <td className="p-4 text-gray-500">{formatDate(listing.created_at)}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 font-bold text-gray-900 font-mono-numbers">₱{listing.rate_per_tester}</td>
+                      <td className="p-3 text-gray-500 font-bold font-mono-numbers">₱{listing.total_budget}</td>
+                      <td className="p-3">{getStatusBadge(listing.status)}</td>
+                      <td className="p-3 text-gray-500 font-mono-numbers">{formatDate(listing.created_at)}</td>
+                      <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"

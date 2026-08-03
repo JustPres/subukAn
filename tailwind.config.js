@@ -13,8 +13,8 @@ module.exports = {
         steel: '#C2C2C2',
         canvas: '#FCFBF9',
         primary: {
-          DEFAULT: '#2B6CB0',
-          hover: '#1D4ED8', // Confident blue hover color
+          DEFAULT: '#2955E3',
+          hover: '#1D4ED8',
         },
         tint: {
           open: {

@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --color-primary: #2B6CB0;
+    --color-primary: #2955E3;
     --color-ink: #1E1E1E;
     --color-slate: #5E5E5E;
     --color-steel: #C2C2C2;
@@ -97,5 +97,19 @@
 
   .rounded-card {
     border-radius: 12px;
+  }
+
+  /* Redesign 0.2: Tabular-nums and Monospace stack */
+  .font-mono-numbers {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Redesign 0.2: Colored Status Dots */
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
   }
 }

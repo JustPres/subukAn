@@ -604,44 +604,29 @@ export default function TesterDashboard() {
             </button>
           </div>
 
-          {/* Metric Summary Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex items-center gap-4">
-              <div className="w-11 h-11 rounded-[8px] bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 font-semibold block">Verified GCash Receiver</span>
-                <span className="text-sm font-mono text-gray-800 font-bold">{gcashNumber}</span>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex items-center justify-center gap-4">
-              <div className="w-11 h-11 rounded-[8px] bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <Wallet className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <span className="text-xs text-gray-500 font-semibold block">Available Balance</span>
-                <span className="text-xl font-black text-emerald-600 block">₱{withdrawableBalance.toFixed(2)}</span>
-              </div>
-              <button
-                onClick={() => setShowPayoutModal(true)}
-                disabled={withdrawableBalance === 0}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[8px] text-xs font-bold disabled:opacity-50"
-              >
-                Withdraw
-              </button>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex items-center gap-4">
-              <div className="w-11 h-11 rounded-[8px] bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                <CheckSquare className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 font-semibold block">Submissions Recorded</span>
-                <span className="text-xl font-black text-gray-900 block">{submissions.length} Tasks</span>
+          {/* Balance Card (The One Loud Element) */}
+          <div className="bg-[#2955E3] text-white p-6 rounded-[20px] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <span className="text-xs text-white/70 font-semibold tracking-wider uppercase block">Available Balance</span>
+              <span className="text-4xl font-black font-mono-numbers block">
+                ₱{withdrawableBalance.toFixed(2)}
+              </span>
+              <div className="flex items-center gap-3 text-xs text-white/80">
+                <span className="font-mono">{gcashNumber}</span>
+                <span className="bg-white/20 text-white rounded-full px-2.5 py-0.5 font-bold uppercase text-[10px]">
+                  Verified
+                </span>
+                <span className="text-white/40">|</span>
+                <span className="font-medium">{submissions.length} Tasks Recorded</span>
               </div>
             </div>
+            <button
+              onClick={() => setShowPayoutModal(true)}
+              disabled={withdrawableBalance === 0}
+              className="px-6 py-3 bg-white hover:bg-gray-100 disabled:bg-white/50 text-[#2955E3] disabled:text-[#2955E3]/60 rounded-[8px] text-sm font-extrabold shadow-sm transition-colors whitespace-nowrap self-start md:self-center"
+            >
+              Withdraw Earnings
+            </button>
           </div>
 
           {/* Main Navigation Tabs */}
@@ -707,69 +692,62 @@ export default function TesterDashboard() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-[12px] divide-y divide-gray-100 overflow-hidden shadow-xs">
                   {listings.map((job) => {
                     const btnConfig = getButtonConfig(job)
                     const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
                     return (
                       <div 
                         key={job.id} 
-                        className={`bg-white border rounded-[12px] p-6 flex flex-col justify-between shadow-xs transition-all duration-200 ${
-                          isFull ? 'border-gray-200 opacity-60' : 'border-gray-200 hover:border-emerald-500 hover:shadow-md'
+                        className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
+                          isFull ? 'bg-gray-50/50 opacity-60' : 'hover:bg-gray-50/50'
                         }`}
                       >
-                        <div>
-                          <div className="flex justify-between items-start mb-4">
-                            <span className="text-2xl font-black text-emerald-700">₱{job.rate_per_tester}</span>
-                            <span className={`text-xs px-2.5 py-1 rounded-[8px] border font-bold ${
-                              job.slots_filled >= job.slots_count
-                                ? 'bg-gray-100 text-gray-500 border-gray-200' 
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            }`}>
-                              {job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}
-                            </span>
-                          </div>
-                          
-                          <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-1.5 flex-wrap">
+                        <div className="space-y-1">
+                          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2 flex-wrap">
                             {job.title}
                             {job.is_quick_impression && (
-                              <span className="text-[10px] font-bold tracking-wider uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md inline-block">
-                                ⚡ 5s Impression
-                              </span>
-                            )}
-                          </h3>
-                          <p className="text-sm text-gray-500 mb-4 line-clamp-2">{job.description}</p>
-    
-                          <div className="flex flex-wrap gap-2 mb-6">
-                            {job.requires_recording && (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
-                                <Video className="w-3 h-3" /> Screen Recording
-                              </span>
-                            )}
-                            {job.requires_image && (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-[8px]">
-                                <ImageIcon className="w-3 h-3" /> Screenshot
+                              <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/60 px-1.5 py-0.5 rounded">
+                                ⚡ 5s
                               </span>
                             )}
                             {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-[8px] font-medium">
-                                🎯 Target Match
+                              <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded">
+                                🎯 Match
                               </span>
+                            )}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-500">
+                            <span>{job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}</span>
+                            <span className="text-gray-300">•</span>
+                            <span className="line-clamp-1 max-w-sm sm:max-w-md">{job.description}</span>
+                            {(job.requires_recording || job.requires_image) && (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                  {[job.requires_recording && 'Recording', job.requires_image && 'Screenshot'].filter(Boolean).join(' + ')}
+                                </span>
+                              </>
                             )}
                           </div>
                         </div>
     
-                        <Link
-                          href={btnConfig.href}
-                          className={`w-full py-2.5 font-bold text-sm rounded-[8px] text-center transition-all flex items-center justify-center ${btnConfig.className}`}
-                          onClick={(e) => {
-                            if (btnConfig.disabled) {
-                              e.preventDefault()
-                            }
-                          }}
-                        >
-                          {btnConfig.text}
-                        </Link>
+                        <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                          <span className="text-lg font-black text-gray-900 font-mono-numbers">
+                            ₱{job.rate_per_tester}
+                          </span>
+                          <Link
+                            href={btnConfig.href}
+                            className={`px-4 py-2 font-extrabold text-xs rounded-button border text-center transition-all ${btnConfig.className}`}
+                            onClick={(e) => {
+                              if (btnConfig.disabled) {
+                                e.preventDefault()
+                              }
+                            }}
+                          >
+                            {btnConfig.text}
+                          </Link>
+                        </div>
                       </div>
                     )
                   })}
@@ -794,50 +772,45 @@ export default function TesterDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                <div className="bg-white border border-gray-200 rounded-[12px] divide-y divide-gray-100 overflow-hidden shadow-xs">
                   {submissions.map((sub) => {
                     return (
-                      <div 
-                        key={sub.id} 
-                        className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-xs space-y-4 hover:border-gray-300 transition-colors"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
-                          <div>
-                            <h3 className="font-extrabold text-base text-gray-900">{sub.listing_title}</h3>
-                            <span className="text-xs text-gray-400 font-medium">
-                              Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}
-                            </span>
+                      <div key={sub.id} className="p-4 space-y-3 hover:bg-gray-50/50 transition-colors">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                              <span className={`status-dot ${
+                                sub.status === 'approved' ? 'bg-emerald-500' :
+                                sub.status === 'pending_review' ? 'bg-amber-500' :
+                                sub.status === 'disputed' ? 'bg-amber-600' : 'bg-rose-500'
+                              }`} />
+                              <span>{sub.listing_title}</span>
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span>Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}</span>
+                              <span>•</span>
+                              <span className="font-semibold uppercase text-[10px] tracking-wider">
+                                {sub.status === 'pending_review' ? 'Under Review' : sub.status}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg font-black text-emerald-600">₱{sub.rate_per_tester}</span>
-                            
-                            {/* Status badge */}
-                            {sub.status === 'approved' && (
-                              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-extrabold rounded-full flex items-center gap-1">
-                                <CheckCircle className="w-3.5 h-3.5" /> Approved
-                              </span>
-                            )}
-                            {sub.status === 'pending_review' && (
-                              <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-extrabold rounded-full flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" /> Under Review
-                              </span>
-                            )}
-                            {sub.status === 'disputed' && (
-                              <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold rounded-full flex items-center gap-1">
-                                <Scale className="w-3.5 h-3.5" /> Disputed
-                              </span>
-                            )}
-                            {sub.status === 'rejected' && (
-                              <span className="px-3 py-1 bg-rose-100 text-rose-800 text-xs font-extrabold rounded-full flex items-center gap-1">
-                                <AlertCircle className="w-3.5 h-3.5" /> Rejected
-                              </span>
-                            )}
+                          <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                            <span className="text-lg font-black text-gray-900 font-mono-numbers">
+                              ₱{sub.rate_per_tester}
+                            </span>
+                            <Link
+                              href={`/dashboard/tester/tasks/${sub.listing_id}`}
+                              className="px-3.5 py-1.5 border border-gray-200 hover:border-gray-300 text-gray-700 font-extrabold text-xs rounded-button transition-colors whitespace-nowrap"
+                            >
+                              Workspace &rarr;
+                            </Link>
                           </div>
                         </div>
 
                         {/* Rejection Details & Dispute Action */}
                         {sub.status === 'rejected' && (
-                          <div className="bg-rose-50 border border-rose-200 rounded-[10px] p-4 text-xs space-y-2">
+                          <div className="bg-rose-50/60 border border-rose-100 rounded-[8px] p-3.5 text-xs space-y-2">
                             <div className="font-bold text-rose-900">
                               Rejection Category: {formatRejectionReason(sub.rejection_reason)}
                             </div>
@@ -846,11 +819,11 @@ export default function TesterDashboard() {
                                 &quot;{sub.rejection_explanation}&quot;
                               </p>
                             )}
-                            <div className="pt-2 flex justify-end">
+                            <div className="pt-1 flex justify-end">
                               <button
                                 type="button"
                                 onClick={() => handleOpenDispute(sub.id, sub.listing_title)}
-                                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-[6px] text-xs flex items-center gap-1.5 shadow-xs"
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-button text-xs flex items-center gap-1.5 shadow-xs transition-colors"
                               >
                                 <ShieldAlert className="w-3.5 h-3.5" /> Submit Rejection Dispute
                               </button>
@@ -860,33 +833,24 @@ export default function TesterDashboard() {
 
                         {/* Dispute Details */}
                         {sub.status === 'disputed' && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-[10px] p-4 text-xs space-y-1">
+                          <div className="bg-amber-50/60 border border-amber-100 rounded-[8px] p-3.5 text-xs space-y-1">
                             <div className="font-bold text-amber-900 flex items-center gap-1.5">
-                              <Scale className="w-4 h-4 text-amber-700" /> Dispute Reason: {formatDisputeReason(sub.dispute_reason)}
+                              <Scale className="w-3.5 h-3.5 text-amber-700" /> Dispute Reason: {formatDisputeReason(sub.dispute_reason)}
                             </div>
                             {sub.dispute_explanation && (
                               <p className="text-amber-950 italic">
                                 &quot;{sub.dispute_explanation}&quot;
                               </p>
                             )}
-                            <span className="text-[10px] text-amber-700 block pt-1">
+                            <span className="text-[10px] text-amber-700/80 block pt-0.5">
                               Support team is reviewing this dispute. Escrow remains held.
                             </span>
                           </div>
                         )}
-
-                        {/* Link to workspace */}
-                        <div className="flex justify-end pt-1">
-                          <Link
-                            href={`/dashboard/tester/tasks/${sub.listing_id}`}
-                            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                          >
-                            View Workspace & Debrief Thread &rarr;
-                          </Link>
-                        </div>
                       </div>
                     )
                   })}
+                </div>
                 </div>
               )}
             </div>
@@ -896,26 +860,26 @@ export default function TesterDashboard() {
           {activeTab === 'earnings' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-xs">
+                <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs">
                   <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Total Earnings</span>
-                  <span className="text-3xl font-black text-gray-900">₱{totalEarnings.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-gray-900 font-mono-numbers">₱{totalEarnings.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-emerald-200 rounded-[12px] p-6 shadow-xs bg-emerald-50/30">
+                <div className="bg-white border border-emerald-200 rounded-[12px] p-5 shadow-xs bg-emerald-50/30">
                   <span className="text-xs text-emerald-800 font-bold block uppercase tracking-wider mb-1">Withdrawable Balance</span>
-                  <span className="text-3xl font-black text-emerald-700">₱{withdrawableBalance.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-emerald-700 font-mono-numbers">₱{withdrawableBalance.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-[12px] p-6 shadow-xs flex flex-col justify-between">
+                <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex flex-col justify-between">
                   <div>
                     <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Completed Payouts</span>
-                    <span className="text-3xl font-black text-gray-900">{payouts.length} Transactions</span>
+                    <span className="text-2xl font-black text-gray-900 font-mono-numbers">{payouts.length} Transactions</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowPayoutModal(true)}
                     disabled={withdrawableBalance === 0}
-                    className="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-xs shadow-xs disabled:opacity-50"
+                    className="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-xs shadow-xs disabled:opacity-50 transition-colors"
                   >
                     Request GCash Payout
                   </button>
@@ -948,9 +912,9 @@ export default function TesterDashboard() {
                         {payouts.map(p => (
                           <tr key={p.id} className="hover:bg-gray-50">
                             <td className="p-4 font-mono font-bold text-gray-900">{p.reference_id}</td>
-                            <td className="p-4 text-gray-600">{new Date(p.created_at).toLocaleString()}</td>
+                            <td className="p-4 text-gray-600 font-mono-numbers">{new Date(p.created_at).toLocaleString()}</td>
                             <td className="p-4 text-gray-700 font-mono">{p.gcash_number}</td>
-                            <td className="p-4 font-extrabold text-emerald-700">₱{p.amount.toFixed(2)}</td>
+                            <td className="p-4 font-extrabold text-emerald-700 font-mono-numbers">₱{p.amount.toFixed(2)}</td>
                             <td className="p-4">
                               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold uppercase text-[10px]">
                                 {p.status}
