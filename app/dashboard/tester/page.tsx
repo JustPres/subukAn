@@ -130,6 +130,17 @@ By participating in this test, you agree to the following binding conditions:
 
 Scroll down and review all terms to accept.`
 
+
+const maskGcashNumber = (num: string) => {
+  if (!num) return '0917-***-5678'
+  if (num.includes('***')) return num
+  const cleaned = num.replace(/[-\s]/g, '')
+  if (cleaned.length === 11) {
+    return `${cleaned.slice(0, 4)}-***-${cleaned.slice(7)}`
+  }
+  return num
+}
+
 function TesterDashboardContent() {
   const supabase = createBrowserClient()
 
@@ -599,27 +610,31 @@ function TesterDashboardContent() {
             </button>
           </div>
 
-          {/* Balance Card (The One Loud Element) */}
-          <div className="bg-gradient-to-r from-[#6366F1] to-[#4F46E5] text-white p-6 rounded-2xl shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 hover-lift">
+          {/* Balance Card (Premium Wise-Inspired Hero) */}
+          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 shadow-xl rounded-2xl p-6 relative overflow-hidden hover-lift flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* Ambient decorative background patterns */}
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-40 h-40 bg-white/10 rounded-full blur-xl pointer-events-none" />
+            <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+            
             <div className="space-y-2 relative z-10">
-              <span className="text-xs text-indigo-100/80 font-bold tracking-wider uppercase block">Available Balance</span>
+              <span className="text-xs text-indigo-100/90 font-bold tracking-wider uppercase block">Withdrawable Balance</span>
               <div className="space-y-1">
-                <span className="text-4xl font-black font-mono-numbers block tracking-tight">
+                <span className="font-mono-numbers text-3xl font-extrabold text-white tracking-tight block">
                   ₱{withdrawableBalance.toFixed(2)}
                 </span>
                 <span className="text-xs text-indigo-100/70 font-medium block">
                   ≈ USD {(withdrawableBalance * 0.018).toFixed(2)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-indigo-100/80 pt-1">
-                <span className="font-mono font-medium">{gcashNumber}</span>
+              <div className="flex items-center gap-3 text-xs text-indigo-100/90 pt-1">
+                <span className="font-mono font-medium">{maskGcashNumber(gcashNumber)}</span>
                 <span className="bg-white/20 text-white rounded-full px-2 py-0.5 font-bold uppercase text-[9px]">
                   Verified
                 </span>
                 <span className="text-white/20">|</span>
                 <button 
                   onClick={() => switchTab('earnings')}
-                  className="font-bold hover:underline inline-flex items-center gap-1"
+                  className="font-bold hover:underline inline-flex items-center gap-1 text-white"
                 >
                   View Earnings History →
                 </button>
@@ -628,60 +643,72 @@ function TesterDashboardContent() {
             <button
               onClick={() => setShowPayoutModal(true)}
               disabled={withdrawableBalance === 0}
-              className="relative z-10 px-6 py-3 bg-white hover:bg-slate-50 disabled:bg-white/50 text-[#6366F1] disabled:text-[#6366F1]/60 rounded-xl text-sm font-black shadow-md transition-all whitespace-nowrap self-start md:self-center hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+              className="relative z-10 px-6 py-3 bg-white text-blue-600 hover:bg-slate-50 disabled:bg-white/50 disabled:text-blue-600/60 font-bold rounded-xl text-sm transition-all whitespace-nowrap self-start md:self-center hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Withdraw Earnings
             </button>
           </div>
 
-          {/* Quick Stats Grid */}
+          {/* Quick Stats Grid (Stripe-Inspired Minimalist Cards) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div onClick={() => switchTab('available')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tasks Available</span>
+            <div 
+              onClick={() => switchTab('available')} 
+              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+            >
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Tasks Available</span>
                 <span className="text-2xl font-black text-slate-900 block font-mono-numbers">{listings.length}</span>
-                <span className="text-[10px] text-indigo-600 font-semibold block">Find new opportunities</span>
+                <span className="text-[10px] text-blue-600 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Find new opportunities &rarr;</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-50/70 text-blue-600 border border-blue-100/50 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-blue-100/50">
                 <Search className="w-5 h-5" />
               </div>
             </div>
 
-            <div onClick={() => switchTab('submissions')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">In Progress</span>
+            <div 
+              onClick={() => switchTab('submissions')} 
+              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+            >
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Active Tasks</span>
                 <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
                   {submissions.filter(s => s.status === 'in_progress').length}
                 </span>
-                <span className="text-[10px] text-amber-600 font-semibold block">Keep it going</span>
+                <span className="text-[10px] text-amber-600 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Keep it going &rarr;</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-50/70 text-amber-600 border border-amber-100/50 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-amber-100/50">
                 <Clock className="w-5 h-5" />
               </div>
             </div>
 
-            <div onClick={() => switchTab('submissions')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
+            <div 
+              onClick={() => switchTab('submissions')} 
+              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+            >
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
                 <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
                   {submissions.filter(s => s.status === 'approved').length}
                 </span>
-                <span className="text-[10px] text-emerald-600 font-semibold block">Great job!</span>
+                <span className="text-[10px] text-emerald-600 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Great job! &rarr;</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50/70 text-emerald-600 border border-emerald-100/50 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-emerald-100/50">
                 <CheckCircle className="w-5 h-5" />
               </div>
             </div>
 
-            <div onClick={() => switchTab('earnings')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Earnings</span>
+            <div 
+              onClick={() => switchTab('earnings')} 
+              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+            >
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Earnings</span>
                 <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
                   ₱{totalEarnedValue.toFixed(2)}
                 </span>
-                <span className="text-[10px] text-slate-500 font-semibold block">Keep earning</span>
+                <span className="text-[10px] text-slate-500 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Keep earning &rarr;</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-slate-50/80 text-slate-700 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-slate-100/50">
                 <DollarSign className="w-5 h-5" />
               </div>
             </div>
@@ -694,7 +721,7 @@ function TesterDashboardContent() {
                 onClick={() => switchTab('available')}
                 className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
                   activeTab === 'available'
-                    ? 'border-emerald-600 text-emerald-600'
+                    ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -706,7 +733,7 @@ function TesterDashboardContent() {
                 onClick={() => switchTab('submissions')}
                 className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
                   activeTab === 'submissions'
-                    ? 'border-emerald-600 text-emerald-600'
+                    ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -718,7 +745,7 @@ function TesterDashboardContent() {
                 onClick={() => switchTab('earnings')}
                 className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
                   activeTab === 'earnings'
-                    ? 'border-emerald-600 text-emerald-600'
+                    ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -728,81 +755,98 @@ function TesterDashboardContent() {
             </nav>
           </div>
 
-          {/* Tab 1: Available Tests */}
+          {/* Tab 1: Available Tests (Linear-Style List Rows) */}
           {activeTab === 'available' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Open Testing Opportunities</h2>
                 <span className="text-xs text-gray-500">Updated in real-time</span>
               </div>
 
               {listings.length === 0 ? (
-                <div className="bg-white border border-gray-200 rounded-[12px] p-12 text-center text-gray-500 shadow-xs space-y-3">
-                  <p className="text-lg font-semibold text-gray-700">No matching tasks found</p>
-                  <p className="text-sm text-gray-400 max-w-md mx-auto">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-slate-500 shadow-sm space-y-4">
+                  <p className="text-lg font-bold text-slate-700">No matching tasks found</p>
+                  <p className="text-sm text-slate-400 max-w-md mx-auto">
                     Try configuring your profile demographics to unlock more target-matched jobs.
                   </p>
                   <button
                     onClick={() => setIsProfileModalOpen(true)}
-                    className="px-4 py-2 bg-purple-600 text-white font-bold text-xs rounded-[8px] hover:bg-purple-700"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
                   >
                     Update Demographics Profile
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
                   {listings.map((job) => {
                     const btnConfig = getButtonConfig(job)
                     const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
                     return (
                       <div 
                         key={job.id} 
-                        className={`p-4 rounded-xl border border-slate-200 bg-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover-lift ${
+                        className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover:bg-slate-50/50 ${
                           isFull ? 'opacity-60' : ''
                         }`}
                       >
-                        <div className="flex items-center gap-3.5">
-                          {/* Asset Type Circle Icon */}
-                          <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border ${
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          {/* Glowing Dot representing vacancy/claim status */}
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            {isFull ? (
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-300"></span>
+                            ) : job.user_submission_status ? (
+                              <>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </>
+                            )}
+                          </span>
+
+                          {/* Icon Circle */}
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${
                             job.is_quick_impression 
-                              ? 'bg-amber-50 text-amber-600 border-amber-100'
+                              ? 'bg-amber-50 text-amber-600 border-amber-100/50'
                               : job.requires_recording
-                                ? 'bg-purple-50 text-purple-600 border-purple-100'
-                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                ? 'bg-purple-50 text-purple-600 border-purple-100/50'
+                                : 'bg-blue-50 text-blue-600 border-blue-100/50'
                           }`}>
                             {job.is_quick_impression ? (
-                              <Zap className="w-5 h-5 animate-pulse" />
+                              <Zap className="w-4 h-4" />
                             ) : job.requires_recording ? (
-                              <Video className="w-5 h-5" />
+                              <Video className="w-4 h-4" />
                             ) : job.site_url?.includes('app') ? (
-                              <Smartphone className="w-5 h-5" />
+                              <Smartphone className="w-4 h-4" />
                             ) : (
-                              <Globe className="w-5 h-5" />
+                              <Globe className="w-4 h-4" />
                             )}
                           </div>
                           
-                          <div className="space-y-1">
-                            <h3 className="font-extrabold text-[#0F172A] text-sm flex items-center gap-2 flex-wrap">
-                              {job.title}
+                          <div className="space-y-0.5 min-w-0 flex-1">
+                            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 flex-wrap">
+                              <span className="truncate">{job.title}</span>
                               {job.is_quick_impression && (
-                                <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/60 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/40 px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
                                   <Zap className="w-2.5 h-2.5 text-amber-500" /> 5s
                                 </span>
                               )}
                               {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
-                                <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/40 px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
                                   <Target className="w-2.5 h-2.5 text-purple-500" /> Match
                                 </span>
                               )}
                             </h3>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
-                              <span>{job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}</span>
-                              <span className="text-slate-350 select-none">•</span>
-                              <span className="line-clamp-1 max-w-sm sm:max-w-md">{job.description}</span>
+                              <span className="shrink-0">{job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}</span>
+                              <span className="text-slate-300 select-none">•</span>
+                              <span className="line-clamp-1 text-slate-400 font-normal">{job.description}</span>
                               {(job.requires_recording || job.requires_image) && (
                                 <>
                                   <span className="text-slate-350 select-none">•</span>
-                                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
                                     {[job.requires_recording && 'Recording', job.requires_image && 'Screenshot'].filter(Boolean).join(' + ')}
                                   </span>
                                 </>
@@ -811,13 +855,13 @@ function TesterDashboardContent() {
                           </div>
                         </div>
     
-                        <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
-                          <span className="text-lg font-black text-[#0F172A] font-mono-numbers">
+                        <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
+                          <span className="text-base font-extrabold text-slate-900 font-mono-numbers">
                             ₱{job.rate_per_tester}
                           </span>
                           <Link
                             href={btnConfig.href}
-                            className={`px-4 py-2 font-extrabold text-xs rounded-lg border text-center transition-all ${btnConfig.className}`}
+                            className={`px-3.5 py-2 font-bold text-xs rounded-xl border text-center transition-all shadow-xs ${btnConfig.className}`}
                             onClick={(e) => {
                               if (btnConfig.disabled) {
                                 e.preventDefault()
@@ -835,9 +879,9 @@ function TesterDashboardContent() {
             </div>
           )}
 
-          {/* Tab 2: My Submissions */}
+          {/* Tab 2: My Submissions (Linear-Style List Rows) */}
           {activeTab === 'submissions' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Your Submission History</h2>
                 <span className="text-xs text-gray-500">{submissions.length} total entries</span>
@@ -850,37 +894,66 @@ function TesterDashboardContent() {
                   <p className="text-sm text-gray-400">Claim an available task to start earning rewards.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                <div className="bg-white border border-gray-200 rounded-[12px] divide-y divide-gray-100 overflow-hidden shadow-xs">
+                <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
                   {submissions.map((sub) => {
                     return (
-                      <div key={sub.id} className="p-4 space-y-3 hover:bg-gray-50/50 transition-colors">
+                      <div key={sub.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="space-y-1">
-                            <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                              <span className={`status-dot ${
-                                sub.status === 'approved' ? 'bg-emerald-500' :
-                                sub.status === 'pending_review' ? 'bg-amber-500' :
-                                sub.status === 'disputed' ? 'bg-amber-600' : 'bg-rose-500'
-                              }`} />
-                              <span>{sub.listing_title}</span>
-                            </h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              <span>Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span className="font-semibold uppercase text-[10px] tracking-wider">
-                                {sub.status === 'pending_review' ? 'Under Review' : sub.status}
-                              </span>
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            {/* Glowing Status Dot */}
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              {sub.status === 'approved' && (
+                                <>
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </>
+                              )}
+                              {sub.status === 'pending_review' && (
+                                <>
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                </>
+                              )}
+                              {sub.status === 'disputed' && (
+                                <>
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                </>
+                              )}
+                              {(sub.status === 'rejected' || sub.status === 'expired') && (
+                                <>
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                                </>
+                              )}
+                            </span>
+
+                            <div className="space-y-0.5 min-w-0 flex-1">
+                              <h3 className="font-bold text-slate-900 text-sm truncate">
+                                {sub.listing_title}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
+                                <span>Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}</span>
+                                <span>•</span>
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase border ${
+                                  sub.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                  sub.status === 'pending_review' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                  sub.status === 'disputed' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                  'bg-rose-50 text-rose-700 border-rose-100'
+                                }`}>
+                                  {sub.status === 'pending_review' ? 'Under Review' : sub.status}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
-                            <span className="text-lg font-black text-gray-900 font-mono-numbers">
+                          <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
+                            <span className="text-base font-extrabold text-slate-900 font-mono-numbers">
                               ₱{sub.rate_per_tester}
                             </span>
                             <Link
                               href={`/dashboard/tester/tasks/${sub.listing_id}`}
-                              className="px-3.5 py-1.5 border border-gray-200 hover:border-gray-300 text-gray-700 font-extrabold text-xs rounded-button transition-colors whitespace-nowrap"
+                              className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl transition-all whitespace-nowrap shadow-xs"
                             >
                               Workspace &rarr;
                             </Link>
@@ -889,7 +962,7 @@ function TesterDashboardContent() {
 
                         {/* Rejection Details & Dispute Action */}
                         {sub.status === 'rejected' && (
-                          <div className="bg-rose-50/60 border border-rose-100 rounded-[8px] p-3.5 text-xs space-y-2">
+                          <div className="bg-rose-50/50 border border-rose-100 rounded-xl p-3.5 text-xs space-y-2 ml-5">
                             <div className="font-bold text-rose-900">
                               Rejection Category: {formatRejectionReason(sub.rejection_reason)}
                             </div>
@@ -902,7 +975,7 @@ function TesterDashboardContent() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenDispute(sub.id, sub.listing_title)}
-                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-button text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors"
                               >
                                 <ShieldAlert className="w-3.5 h-3.5" /> Submit Rejection Dispute
                               </button>
@@ -912,16 +985,16 @@ function TesterDashboardContent() {
 
                         {/* Dispute Details */}
                         {sub.status === 'disputed' && (
-                          <div className="bg-amber-50/60 border border-amber-100 rounded-[8px] p-3.5 text-xs space-y-1">
-                            <div className="font-bold text-amber-900 flex items-center gap-1.5">
-                              <Scale className="w-3.5 h-3.5 text-amber-700" /> Dispute Reason: {formatDisputeReason(sub.dispute_reason)}
+                          <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3.5 text-xs space-y-1 ml-5">
+                            <div className="font-bold text-orange-900 flex items-center gap-1.5">
+                              <Scale className="w-3.5 h-3.5 text-orange-700" /> Dispute Reason: {formatDisputeReason(sub.dispute_reason)}
                             </div>
                             {sub.dispute_explanation && (
-                              <p className="text-amber-950 italic">
+                              <p className="text-orange-950 italic">
                                 &quot;{sub.dispute_explanation}&quot;
                               </p>
                             )}
-                            <span className="text-[10px] text-amber-700/80 block pt-0.5">
+                            <span className="text-[10px] text-orange-700/80 block pt-0.5">
                               Support team is reviewing this dispute. Escrow remains held.
                             </span>
                           </div>
@@ -929,7 +1002,6 @@ function TesterDashboardContent() {
                       </div>
                     )
                   })}
-                </div>
                 </div>
               )}
             </div>
@@ -939,26 +1011,26 @@ function TesterDashboardContent() {
           {activeTab === 'earnings' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs">
-                  <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Total Earnings</span>
-                  <span className="text-2xl font-black text-gray-900 font-mono-numbers">₱{totalEarnings.toFixed(2)}</span>
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover-lift transition-all">
+                  <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-1">Total Earnings</span>
+                  <span className="text-2xl font-extrabold text-slate-900 font-mono-numbers tracking-tight">₱{totalEarnings.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-emerald-200 rounded-[12px] p-5 shadow-xs bg-emerald-50/30">
-                  <span className="text-xs text-emerald-800 font-bold block uppercase tracking-wider mb-1">Withdrawable Balance</span>
-                  <span className="text-2xl font-black text-emerald-700 font-mono-numbers">₱{withdrawableBalance.toFixed(2)}</span>
+                <div className="bg-white border border-emerald-200/80 rounded-2xl p-5 shadow-sm bg-emerald-50/30 hover-lift transition-all">
+                  <span className="text-xs text-emerald-800 font-semibold block uppercase tracking-wider mb-1">Withdrawable Balance</span>
+                  <span className="text-2xl font-extrabold text-emerald-700 font-mono-numbers tracking-tight">₱{withdrawableBalance.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-[12px] p-5 shadow-xs flex flex-col justify-between">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col justify-between hover-lift transition-all">
                   <div>
-                    <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Completed Payouts</span>
-                    <span className="text-2xl font-black text-gray-900 font-mono-numbers">{payouts.length} Transactions</span>
+                    <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-1">Completed Payouts</span>
+                    <span className="text-2xl font-extrabold text-slate-900 font-mono-numbers tracking-tight">{payouts.length} Transactions</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowPayoutModal(true)}
                     disabled={withdrawableBalance === 0}
-                    className="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-[8px] text-xs shadow-xs disabled:opacity-50 transition-colors"
+                    className="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-xl text-xs shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Request GCash Payout
                   </button>
@@ -966,19 +1038,19 @@ function TesterDashboardContent() {
               </div>
 
               {/* Payout History Table */}
-              <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-xs">
-                <div className="p-5 border-b border-gray-200 bg-gray-50">
-                  <h3 className="font-extrabold text-base text-gray-900">GCash Payout History</h3>
+              <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200 bg-slate-50">
+                  <h3 className="font-extrabold text-base text-slate-900">GCash Payout History</h3>
                 </div>
 
                 {payouts.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400 text-xs font-mono">
+                  <div className="p-8 text-center text-slate-400 text-xs font-mono">
                     No payout transactions requested yet.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider font-bold border-b border-gray-200">
+                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
                         <tr>
                           <th className="p-4">Reference ID</th>
                           <th className="p-4">Date & Time</th>
@@ -987,12 +1059,12 @@ function TesterDashboardContent() {
                           <th className="p-4">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 font-medium">
+                      <tbody className="divide-y divide-slate-100 font-medium">
                         {payouts.map(p => (
-                          <tr key={p.id} className="hover:bg-gray-50">
-                            <td className="p-4 font-mono font-bold text-gray-900">{p.reference_id}</td>
-                            <td className="p-4 text-gray-600 font-mono-numbers">{new Date(p.created_at).toLocaleString()}</td>
-                            <td className="p-4 text-gray-700 font-mono">{p.gcash_number}</td>
+                          <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-4 font-mono font-bold text-slate-900">{p.reference_id}</td>
+                            <td className="p-4 text-slate-650 font-mono-numbers">{new Date(p.created_at).toLocaleString()}</td>
+                            <td className="p-4 text-slate-700 font-mono">{maskGcashNumber(p.gcash_number)}</td>
                             <td className="p-4 font-extrabold text-emerald-700 font-mono-numbers">₱{p.amount.toFixed(2)}</td>
                             <td className="p-4">
                               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold uppercase text-[10px]">
@@ -1031,10 +1103,10 @@ function TesterDashboardContent() {
       {/* Payout Modal */}
       {showPayoutModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[12px] w-full max-w-md shadow-xl overflow-hidden">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-extrabold text-lg flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-emerald-600" /> GCash Payout
+              <h3 className="font-extrabold text-lg flex items-center gap-2 text-slate-900">
+                <Wallet className="w-5 h-5 text-blue-600" /> GCash Payout
               </h3>
               <button 
                 type="button"
@@ -1044,7 +1116,7 @@ function TesterDashboardContent() {
                   setPayoutError(null)
                   setPayoutGcashNumber('')
                 }}
-                className="text-gray-400 hover:text-gray-600 text-lg"
+                className="text-gray-400 hover:text-gray-600 text-xl font-medium"
               >
                 &times;
               </button>
@@ -1053,7 +1125,7 @@ function TesterDashboardContent() {
             <div className="p-6 space-y-4">
               {payoutSuccess ? (
                 <div className="text-center space-y-3 py-4">
-                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
                     <CheckCircle className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-gray-900">Payout Requested!</h4>
@@ -1061,27 +1133,27 @@ function TesterDashboardContent() {
                 </div>
               ) : (
                 <form onSubmit={handleRequestPayout} className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-[8px] flex justify-between items-center border border-gray-100">
-                    <span className="text-sm font-semibold text-gray-600">Available Balance</span>
-                    <span className="text-lg font-black text-emerald-600">₱{withdrawableBalance.toFixed(2)}</span>
+                  <div className="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
+                    <span className="text-sm font-semibold text-slate-600">Available Balance</span>
+                    <span className="text-lg font-black text-blue-600">₱{withdrawableBalance.toFixed(2)}</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">GCash Mobile Number</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">GCash Mobile Number</label>
                     <input
                       type="text"
                       required
                       value={payoutGcashNumber}
                       onChange={e => setPayoutGcashNumber(e.target.value)}
                       placeholder="09XXXXXXXXX"
-                      className="w-full p-2.5 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
-                    <p className="text-[10px] text-gray-400 mt-1.5">Enter 11-digit Philippine mobile number.</p>
+                    <p className="text-[10px] text-slate-400 mt-1.5">Enter 11-digit Philippine mobile number.</p>
                   </div>
 
                   {payoutError && (
-                    <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-[8px] flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                       <span>{payoutError}</span>
                     </div>
                   )}
@@ -1094,14 +1166,14 @@ function TesterDashboardContent() {
                         setPayoutError(null)
                         setPayoutGcashNumber('')
                       }}
-                      className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-sm font-semibold"
+                      className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm font-semibold transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={payoutLoading}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-[8px] text-sm font-semibold shadow-sm flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold shadow-sm flex items-center gap-2 transition-colors"
                     >
                       {payoutLoading ? 'Processing...' : 'Confirm Payout'}
                     </button>

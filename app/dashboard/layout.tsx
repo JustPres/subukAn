@@ -54,15 +54,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas">
+    <div className="flex h-screen w-screen overflow-hidden bg-canvas relative">
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/15 blur-[120px] pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/10 blur-[120px] pointer-events-none z-0" />
+      
       <DashboardSidebar 
         role={role} 
         isOpen={isSidebarOpen} 
         onToggle={setIsSidebarOpen} 
       />
       
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-gray-200 shadow-xs shrink-0 z-30">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden z-10">
+        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white/70 backdrop-blur-md border-b border-slate-100 z-30 relative shrink-0">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsSidebarOpen(true)}

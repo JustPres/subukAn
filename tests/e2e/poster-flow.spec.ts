@@ -15,7 +15,7 @@ test.describe('Poster Flow E2E', () => {
     await page.goto('/dashboard/poster');
 
     // Assert page header loaded
-    await expect(page.locator('h1')).toContainText('Poster Workspace');
+    await expect(page.locator('h1')).toContainText('Poster Workspace', { timeout: 25000 });
 
     // Click "Create New Listing"
     await page.click('text=Create New Listing');

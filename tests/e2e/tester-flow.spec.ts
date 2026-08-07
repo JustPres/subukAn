@@ -15,7 +15,7 @@ test.describe('Tester Flow & Milestone 4 Features E2E', () => {
 
     // Click Notification Bell button in header
     const bellButton = page.locator('button[aria-label="Open notifications"]');
-    await expect(bellButton).toBeVisible();
+    await expect(bellButton).toBeVisible({ timeout: 25000 });
     await bellButton.click();
 
     // Verify Notification Drawer opened

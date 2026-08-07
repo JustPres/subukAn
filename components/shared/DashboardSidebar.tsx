@@ -60,7 +60,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#0F172A] text-white transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:flex lg:flex-col ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#0B0F19] text-white transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:flex lg:flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -95,10 +95,10 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
                 key={link.name} 
                 href={link.href}
                 onClick={() => onToggle(false)}
-                className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 ${
+                className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-300 ease-in-out ${
                   isActive 
-                    ? 'bg-[#6366F1] text-white shadow-lg shadow-indigo-500/25 font-semibold' 
-                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-indigo-500/20' 
+                    : 'text-slate-400 hover:bg-slate-800/40 hover:text-white'
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -112,7 +112,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
           <Link 
             href="/dashboard?select=true"
             onClick={() => onToggle(false)}
-            className="flex items-center space-x-3 rounded-lg px-4 py-3 text-slate-400 hover:bg-slate-800/60 hover:text-white transition-all duration-200"
+            className="flex items-center space-x-3 rounded-lg px-4 py-3 text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all duration-300 ease-in-out"
           >
             <ArrowLeftRight className="h-5 w-5" />
             <span className="font-medium">Switch Role</span>
@@ -120,7 +120,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
           
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 rounded-lg px-4 py-3 text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-all duration-200"
+            className="w-full flex items-center space-x-3 rounded-lg px-4 py-3 text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-all duration-300 ease-in-out"
           >
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Logout</span>

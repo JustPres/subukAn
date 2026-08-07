@@ -371,44 +371,68 @@ function PosterDashboardContent() {
     switch (status) {
       case 'open':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-sky-500" /> Open / Funding
+          <span className="inline-flex items-center gap-2 text-xs text-slate-650 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+            </span>
+            Open / Funding
           </span>
         )
       case 'filling':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-amber-500" /> Active (Slots Filling)
+          <span className="inline-flex items-center gap-2 text-xs text-slate-650 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            Active (Filling)
           </span>
         )
       case 'review':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-purple-500" /> Under Review
+          <span className="inline-flex items-center gap-2 text-xs text-slate-650 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+            </span>
+            Under Review
           </span>
         )
       case 'released':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-emerald-500" /> Payment Released
+          <span className="inline-flex items-center gap-2 text-xs text-slate-655 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+            </span>
+            Released
           </span>
         )
       case 'rejected':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-rose-500" /> Rejected
+          <span className="inline-flex items-center gap-2 text-xs text-slate-655 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+            Rejected
           </span>
         )
       case 'expired':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-gray-500" /> Expired
+          <span className="inline-flex items-center gap-2 text-xs text-slate-655 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+            </span>
+            Expired
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span className="status-dot bg-gray-400" /> {status || 'Unknown'}
+          <span className="inline-flex items-center gap-2 text-xs text-slate-655 font-medium bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+            </span>
+            {status || 'Unknown'}
           </span>
         )
     }
@@ -641,87 +665,178 @@ function PosterDashboardContent() {
         </div>
       </div>
 
-      {/* Escrow Ledger Card (The One Loud Element) */}
-      <div className="bg-gradient-to-r from-[#6366F1] to-[#4F46E5] text-white p-6 rounded-2xl shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 hover-lift">
-        <div className="space-y-2 relative z-10">
-          <span className="text-xs text-indigo-100/80 font-bold tracking-wider uppercase block">Total Escrow Funds Locked</span>
-          <div className="space-y-1">
-            <span className="text-4xl font-black font-mono-numbers block tracking-tight">
+      {/* Escrow Ledger & Secondary Metrics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Escrow Funds Hero Card */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 border border-slate-800 shadow-xl rounded-2xl p-6 relative overflow-hidden hover-lift flex flex-col justify-between min-h-[220px]">
+          {/* Ambient glow effects */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none -ml-10 -mb-10"></div>
+          
+          {/* Top section: Chip & Badge & Active status dot */}
+          <div className="relative z-10 flex justify-between items-start">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-extrabold tracking-tight text-lg select-none">subukAn</span>
+                <span className="text-xs text-indigo-300 font-semibold px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-md">Escrow Wallet</span>
+              </div>
+              <span className="text-xs text-slate-400 block font-mono-numbers">
+                {user?.id ? `Poster ID: ...${user.id.slice(-6).toUpperCase()}` : 'Poster ID: --'}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
+                Active Escrow
+              </div>
+              {/* Card chip */}
+              <div className="w-10 h-8 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 rounded-md relative overflow-hidden flex flex-wrap p-1 border border-amber-600/30 shadow-inner">
+                <div className="w-1/2 h-1/2 border-r border-b border-amber-700/20"></div>
+                <div className="w-1/2 h-1/2 border-b border-amber-700/20"></div>
+                <div className="w-1/2 h-1/2 border-r border-amber-700/20"></div>
+                <div className="w-1/2 h-1/2"></div>
+                <div className="absolute inset-2 bg-gradient-to-tr from-yellow-400 to-amber-300 rounded-sm border border-amber-700/10"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle section: Amount */}
+          <div className="relative z-10 my-4">
+            <span className="text-xs text-slate-400 font-bold tracking-wider uppercase block mb-1">Total Escrow Funds Locked</span>
+            <span className="font-mono-numbers text-3xl font-extrabold text-white tracking-tight">
               ₱{calculateEscrowFunds().toLocaleString()}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-indigo-100/80 pt-1">
-            <span className="bg-white/20 text-white rounded-full px-2 py-0.5 font-bold uppercase text-[9px]">
-              PayMongo Account Verified
-            </span>
-            <span className="text-white/20">|</span>
-            <span className="font-semibold font-mono-numbers text-indigo-100/90">
-              {listings.filter(l => l.status !== 'released' && l.status !== 'expired').length} Active Listings
-            </span>
+
+          {/* Bottom section: Actions / Meta */}
+          <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-slate-800/60">
+            <div className="text-xs text-slate-400">
+              {paymentSettings.gcash_payout_number ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                  GCash Wallet: {paymentSettings.gcash_payout_number.replace(/(\d{4})\d+(\d{3})/, '$1***$2')}
+                </span>
+              ) : (
+                <span className="text-slate-500">No GCash payout details configured</span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setSubmitError(null)
+                setErrors({})
+                setIsModalOpen(true)
+              }}
+              className="w-full sm:w-auto px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold shadow-md transition-all whitespace-nowrap flex items-center justify-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Plus className="w-3.5 h-3.5" /> Create New Listing
+            </button>
           </div>
         </div>
-        <button
-          onClick={() => {
-            setSubmitError(null)
-            setErrors({})
-            setIsModalOpen(true)
-          }}
-          className="relative z-10 px-6 py-3 bg-white hover:bg-slate-50 text-[#6366F1] rounded-xl text-sm font-black shadow-md transition-all whitespace-nowrap self-start md:self-center flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
-        >
-          <Plus className="w-4 h-4" /> Create New Listing
-        </button>
+
+        {/* Secondary Metrics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
+          {/* Active Listings Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover-lift flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Listings</span>
+              <Briefcase className="w-4 h-4 text-indigo-500" />
+            </div>
+            <div className="mt-2">
+              <span className="font-mono-numbers text-2xl font-bold text-slate-900">
+                {listings.filter(l => l.status !== 'released' && l.status !== 'expired').length}
+              </span>
+              <span className="text-xs text-slate-400 block mt-0.5">round campaigns</span>
+            </div>
+          </div>
+
+          {/* Total Slots Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover-lift flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Slots</span>
+              <Users className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="mt-2">
+              <span className="font-mono-numbers text-2xl font-bold text-slate-900">
+                {listings.reduce((sum, l) => sum + l.slots_filled, 0)} / {listings.reduce((sum, l) => sum + l.slots_count, 0)}
+              </span>
+              <span className="text-xs text-slate-400 block mt-0.5">filled / total slots</span>
+            </div>
+          </div>
+
+          {/* Spent Payouts Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover-lift flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Spent Payouts</span>
+              <Wallet className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="mt-2">
+              <span className="font-mono-numbers text-2xl font-bold text-slate-900">
+                ₱{listings.filter(l => l.status === 'released').reduce((sum, l) => sum + l.total_budget, 0).toLocaleString()}
+              </span>
+              <span className="text-xs text-slate-400 block mt-0.5">fully disbursed</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Listings Section */}
-      <div id="listings-container">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-gray-600" /> My Testing Listings
-        </h2>
+      <div id="listings-container" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 tracking-tight">
+            <FileText className="w-4 h-4 text-slate-500" /> Campaigns & Listings
+          </h2>
+          <span className="text-xs text-slate-500 font-medium font-mono-numbers bg-slate-100 px-2 py-0.5 rounded-full">
+            {listings.length} total
+          </span>
+        </div>
         
-        <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             {listings.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                You have not created any listings yet. Click &quot;Create New Listing&quot; to get started!
+              <div className="p-12 text-center text-slate-500 space-y-2">
+                <FileText className="w-8 h-8 text-slate-300 mx-auto animate-pulse" />
+                <p className="font-semibold text-sm">No campaigns found</p>
+                <p className="text-xs text-slate-400">Click &quot;Create New Listing&quot; to launch your first testing round.</p>
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-semibold uppercase tracking-wider">
-                    <th className="p-3">Title</th>
-                    <th className="p-3">Slots</th>
-                    <th className="p-3">Rate per Tester</th>
-                    <th className="p-3">Escrow Total</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Created Date</th>
-                    <th className="p-3 text-right">Actions</th>
+                  <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-50/40">
+                    <th className="py-3 px-4">Campaign Title</th>
+                    <th className="py-3 px-4">Slots claimed</th>
+                    <th className="py-3 px-4">Rate per Tester</th>
+                    <th className="py-3 px-4">Total budget</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Created Date</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
+                <tbody className="divide-y divide-slate-100 text-sm">
                   {listings.map(listing => (
-                    <tr key={listing.id} className="hover:bg-indigo-50/10 transition-colors border-b border-slate-200 last:border-0">
-                      <td className="p-3 font-bold text-[#0F172A] max-w-xs truncate">
-                        <Link href={`/dashboard/poster/listings/${listing.id}`} className="hover:text-[#6366F1] hover:underline">
+                    <tr key={listing.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900 max-w-xs truncate">
+                        <Link href={`/dashboard/poster/listings/${listing.id}`} className="hover:text-indigo-650 transition-colors font-medium flex items-center gap-1.5">
                           {listing.title}
                         </Link>
                       </td>
-                      <td className="p-3 text-slate-600 font-mono-numbers">
+                      <td className="py-3.5 px-4 text-slate-600 font-mono-numbers">
                         <div className="flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-slate-400" />
                           <span>{listing.slots_filled} / {listing.slots_count}</span>
                         </div>
                       </td>
-                      <td className="p-3 font-black text-[#0F172A] font-mono-numbers">₱{listing.rate_per_tester}</td>
-                      <td className="p-3 text-slate-500 font-extrabold font-mono-numbers">₱{listing.total_budget}</td>
-                      <td className="p-3">{getStatusBadge(listing.status)}</td>
-                      <td className="p-3 text-slate-550 font-mono-numbers">{formatDate(listing.created_at)}</td>
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="py-3.5 px-4 font-semibold text-slate-950 font-mono-numbers">₱{listing.rate_per_tester}</td>
+                      <td className="py-3.5 px-4 font-bold text-slate-950 font-mono-numbers">₱{listing.total_budget.toLocaleString()}</td>
+                      <td className="py-3.5 px-4">{getStatusBadge(listing.status)}</td>
+                      <td className="py-3.5 px-4 text-slate-500 font-mono-numbers">{formatDate(listing.created_at)}</td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                           <button
                             type="button"
                             onClick={() => handleDuplicateListing(listing)}
                             title="Duplicate listing"
-                            className="p-1.5 text-slate-400 hover:text-[#6366F1] hover:bg-indigo-50 rounded-[6px] transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
@@ -729,7 +844,7 @@ function PosterDashboardContent() {
                             type="button"
                             onClick={() => handleDownloadReceipt(listing)}
                             title="Download receipt"
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-[6px] transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>
