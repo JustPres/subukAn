@@ -31,3 +31,4 @@
 [2026-08-07 18:30:00] Build/Lint/Test Successful - Guarded GET, POST, PATCH, PUT, and DELETE endpoints in mock-supabase in production environment and implemented mock support for poster_payment_settings.
 [2026-08-07 18:41:00] Build/Lint/Test/E2E Successful - Isolated poster payment credentials into poster_payment_settings table, updated settings page & payout route queries, and fixed playwright E2E strict selector collisions.
 [2026-08-07 18:57:00] Build/Lint/Test/E2E Successful - Redesigned entire dashboard shell with ambient mesh gradients and glassmorphism, Wise-inspired wallet cards, golden microchips on Escrow heroes, Linear rows, pulsing indicator dots, and corrected spec timeouts.
+[2026-08-07 19:50:00] Build/Lint/Test/E2E Successful - Aligned styling to Design System v0.2, synced primary color to #2955E3, created flat balance/escrow cards, enforced 8px rectangular button geometry, and set standard cards to 12px.
