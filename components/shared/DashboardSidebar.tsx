@@ -97,7 +97,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
                 onClick={() => onToggle(false)}
                 className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-300 ease-in-out ${
                   isActive 
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-indigo-500/20' 
+                    ? 'bg-[#2955E3] text-white font-semibold' 
                     : 'text-slate-400 hover:bg-slate-800/40 hover:text-white'
                 }`}
               >

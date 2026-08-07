@@ -603,7 +603,7 @@ function TesterDashboardContent() {
 
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-[10px] font-extrabold text-xs flex items-center gap-2 self-start md:self-auto transition-all shadow-xs"
+              className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-[8px] font-extrabold text-xs flex items-center gap-2 self-start md:self-auto transition-all shadow-xs"
             >
               <User className="w-4 h-4" />
               <span>Profile & Notifications</span>
@@ -611,10 +611,7 @@ function TesterDashboardContent() {
           </div>
 
           {/* Balance Card (Premium Wise-Inspired Hero) */}
-          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 shadow-xl rounded-2xl p-6 relative overflow-hidden hover-lift flex flex-col md:flex-row md:items-center justify-between gap-6">
-            {/* Ambient decorative background patterns */}
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-40 h-40 bg-white/10 rounded-full blur-xl pointer-events-none" />
-            <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="bg-[#2955E3] shadow-xl rounded-2xl p-6 relative overflow-hidden hover-lift flex flex-col md:flex-row md:items-center justify-between gap-6">
             
             <div className="space-y-2 relative z-10">
               <span className="text-xs text-indigo-100/90 font-bold tracking-wider uppercase block">Withdrawable Balance</span>
@@ -643,7 +640,7 @@ function TesterDashboardContent() {
             <button
               onClick={() => setShowPayoutModal(true)}
               disabled={withdrawableBalance === 0}
-              className="relative z-10 px-6 py-3 bg-white text-blue-600 hover:bg-slate-50 disabled:bg-white/50 disabled:text-blue-600/60 font-bold rounded-xl text-sm transition-all whitespace-nowrap self-start md:self-center hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative z-10 px-6 py-3 bg-white text-blue-600 hover:bg-slate-50 disabled:bg-white/50 disabled:text-blue-600/60 font-bold rounded-[8px] text-sm transition-all whitespace-nowrap self-start md:self-center hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Withdraw Earnings
             </button>
@@ -653,7 +650,7 @@ function TesterDashboardContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div 
               onClick={() => switchTab('available')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
             >
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Tasks Available</span>
@@ -667,7 +664,7 @@ function TesterDashboardContent() {
 
             <div 
               onClick={() => switchTab('submissions')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
             >
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Active Tasks</span>
@@ -683,7 +680,7 @@ function TesterDashboardContent() {
 
             <div 
               onClick={() => switchTab('submissions')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
             >
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
@@ -699,7 +696,7 @@ function TesterDashboardContent() {
 
             <div 
               onClick={() => switchTab('earnings')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-2xl shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
+              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
             >
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Earnings</span>
@@ -764,20 +761,20 @@ function TesterDashboardContent() {
               </div>
 
               {listings.length === 0 ? (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-slate-500 shadow-sm space-y-4">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] p-12 text-center text-slate-500 shadow-sm space-y-4">
                   <p className="text-lg font-bold text-slate-700">No matching tasks found</p>
                   <p className="text-sm text-slate-400 max-w-md mx-auto">
                     Try configuring your profile demographics to unlock more target-matched jobs.
                   </p>
                   <button
                     onClick={() => setIsProfileModalOpen(true)}
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-[8px] shadow-xs transition-colors"
                   >
                     Update Demographics Profile
                   </button>
                 </div>
               ) : (
-                <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] overflow-hidden shadow-sm divide-y divide-slate-100">
                   {listings.map((job) => {
                     const btnConfig = getButtonConfig(job)
                     const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
@@ -861,7 +858,7 @@ function TesterDashboardContent() {
                           </span>
                           <Link
                             href={btnConfig.href}
-                            className={`px-3.5 py-2 font-bold text-xs rounded-xl border text-center transition-all shadow-xs ${btnConfig.className}`}
+                            className={`px-3.5 py-2 font-bold text-xs rounded-[8px] border text-center transition-all shadow-xs ${btnConfig.className}`}
                             onClick={(e) => {
                               if (btnConfig.disabled) {
                                 e.preventDefault()
@@ -894,7 +891,7 @@ function TesterDashboardContent() {
                   <p className="text-sm text-gray-400">Claim an available task to start earning rewards.</p>
                 </div>
               ) : (
-                <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] overflow-hidden shadow-sm divide-y divide-slate-100">
                   {submissions.map((sub) => {
                     return (
                       <div key={sub.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
@@ -953,7 +950,7 @@ function TesterDashboardContent() {
                             </span>
                             <Link
                               href={`/dashboard/tester/tasks/${sub.listing_id}`}
-                              className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl transition-all whitespace-nowrap shadow-xs"
+                              className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-[8px] transition-all whitespace-nowrap shadow-xs"
                             >
                               Workspace &rarr;
                             </Link>
@@ -962,7 +959,7 @@ function TesterDashboardContent() {
 
                         {/* Rejection Details & Dispute Action */}
                         {sub.status === 'rejected' && (
-                          <div className="bg-rose-50/50 border border-rose-100 rounded-xl p-3.5 text-xs space-y-2 ml-5">
+                          <div className="bg-rose-50/50 border border-rose-100 rounded-[12px] p-3.5 text-xs space-y-2 ml-5">
                             <div className="font-bold text-rose-900">
                               Rejection Category: {formatRejectionReason(sub.rejection_reason)}
                             </div>
@@ -975,7 +972,7 @@ function TesterDashboardContent() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenDispute(sub.id, sub.listing_title)}
-                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-[8px] text-xs flex items-center gap-1.5 shadow-xs transition-colors"
                               >
                                 <ShieldAlert className="w-3.5 h-3.5" /> Submit Rejection Dispute
                               </button>
@@ -985,7 +982,7 @@ function TesterDashboardContent() {
 
                         {/* Dispute Details */}
                         {sub.status === 'disputed' && (
-                          <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3.5 text-xs space-y-1 ml-5">
+                          <div className="bg-orange-50/50 border border-orange-100 rounded-[12px] p-3.5 text-xs space-y-1 ml-5">
                             <div className="font-bold text-orange-900 flex items-center gap-1.5">
                               <Scale className="w-3.5 h-3.5 text-orange-700" /> Dispute Reason: {formatDisputeReason(sub.dispute_reason)}
                             </div>
@@ -1011,17 +1008,17 @@ function TesterDashboardContent() {
           {activeTab === 'earnings' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover-lift transition-all">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] p-5 shadow-sm hover-lift transition-all">
                   <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-1">Total Earnings</span>
                   <span className="text-2xl font-extrabold text-slate-900 font-mono-numbers tracking-tight">₱{totalEarnings.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-emerald-200/80 rounded-2xl p-5 shadow-sm bg-emerald-50/30 hover-lift transition-all">
+                <div className="bg-white border border-emerald-200/80 rounded-[12px] p-5 shadow-sm bg-emerald-50/30 hover-lift transition-all">
                   <span className="text-xs text-emerald-800 font-semibold block uppercase tracking-wider mb-1">Withdrawable Balance</span>
                   <span className="text-2xl font-extrabold text-emerald-700 font-mono-numbers tracking-tight">₱{withdrawableBalance.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col justify-between hover-lift transition-all">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] p-5 shadow-sm flex flex-col justify-between hover-lift transition-all">
                   <div>
                     <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-1">Completed Payouts</span>
                     <span className="text-2xl font-extrabold text-slate-900 font-mono-numbers tracking-tight">{payouts.length} Transactions</span>
@@ -1030,7 +1027,7 @@ function TesterDashboardContent() {
                     type="button"
                     onClick={() => setShowPayoutModal(true)}
                     disabled={withdrawableBalance === 0}
-                    className="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-xl text-xs shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-[8px] text-xs shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Request GCash Payout
                   </button>
@@ -1038,7 +1035,7 @@ function TesterDashboardContent() {
               </div>
 
               {/* Payout History Table */}
-              <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
+              <div className="bg-white border border-slate-200/80 rounded-[12px] overflow-hidden shadow-sm">
                 <div className="p-5 border-b border-slate-200 bg-slate-50">
                   <h3 className="font-extrabold text-base text-slate-900">GCash Payout History</h3>
                 </div>
@@ -1103,7 +1100,7 @@ function TesterDashboardContent() {
       {/* Payout Modal */}
       {showPayoutModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+          <div className="bg-white rounded-[12px] w-full max-w-md shadow-xl overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
               <h3 className="font-extrabold text-lg flex items-center gap-2 text-slate-900">
                 <Wallet className="w-5 h-5 text-blue-600" /> GCash Payout
@@ -1133,7 +1130,7 @@ function TesterDashboardContent() {
                 </div>
               ) : (
                 <form onSubmit={handleRequestPayout} className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
+                  <div className="bg-slate-50 p-4 rounded-[12px] flex justify-between items-center border border-slate-100">
                     <span className="text-sm font-semibold text-slate-600">Available Balance</span>
                     <span className="text-lg font-black text-blue-600">₱{withdrawableBalance.toFixed(2)}</span>
                   </div>
@@ -1146,13 +1143,13 @@ function TesterDashboardContent() {
                       value={payoutGcashNumber}
                       onChange={e => setPayoutGcashNumber(e.target.value)}
                       placeholder="09XXXXXXXXX"
-                      className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full p-2.5 border border-slate-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <p className="text-[10px] text-slate-400 mt-1.5">Enter 11-digit Philippine mobile number.</p>
                   </div>
 
                   {payoutError && (
-                    <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl flex items-start gap-2">
+                    <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-[8px] flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                       <span>{payoutError}</span>
                     </div>
@@ -1166,14 +1163,14 @@ function TesterDashboardContent() {
                         setPayoutError(null)
                         setPayoutGcashNumber('')
                       }}
-                      className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm font-semibold transition-colors"
+                      className="px-4 py-2 border border-slate-200 text-slate-700 rounded-[8px] hover:bg-slate-50 text-sm font-semibold transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={payoutLoading}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold shadow-sm flex items-center gap-2 transition-colors"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-[8px] text-sm font-semibold shadow-sm flex items-center gap-2 transition-colors"
                     >
                       {payoutLoading ? 'Processing...' : 'Confirm Payout'}
                     </button>
