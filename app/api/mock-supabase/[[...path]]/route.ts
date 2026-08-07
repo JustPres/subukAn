@@ -120,16 +120,85 @@ interface MockDb {
 
 const globalRef = globalThis as typeof globalThis & { mockDb?: MockDb };
 if (!globalRef.mockDb) {
+  const users = new Map<string, MockUser>();
+  const profiles = new Map<string, MockProfile>();
+  const listings = new Map<string, MockListing>();
+  const tasks = new Map<string, MockTask>();
+  const submissions = new Map<string, MockSubmission>();
+  const taskResponses = new Map<string, MockTaskResponse>();
+  const submissionComments = new Map<string, MockComment>();
+  const notifications = new Map<string, MockNotification>();
+  const posterPaymentSettings = new Map<string, MockPosterPaymentSettings>();
+
+  // Auto-seed default poster user
+  users.set('user_mock_poster_id', {
+    id: 'user_mock_poster_id',
+    email: 'test-poster@example.com',
+    user_metadata: {
+      role: 'poster',
+      full_name: 'Test Poster',
+      device_type: 'desktop',
+      tech_comfort_level: 'casual_user',
+      phone_verified: true,
+    },
+    created_at: new Date().toISOString(),
+  });
+  profiles.set('user_mock_poster_id', {
+    id: 'user_mock_poster_id',
+    role: 'poster',
+    full_name: 'Test Poster',
+    device_type: 'desktop',
+    tech_comfort_level: 'casual_user',
+    phone_verified: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+  posterPaymentSettings.set('user_mock_poster_id', {
+    id: 'user_mock_poster_id',
+    payment_settings: {
+      sandbox_mode: true,
+      paymongo_public_key: 'pk_mock_key',
+      paymongo_secret_key: 'sk_mock_key',
+      gcash_payout_number: '0917-333-4444',
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  // Auto-seed default tester user
+  users.set('user_mock_tester_id', {
+    id: 'user_mock_tester_id',
+    email: 'test-tester@example.com',
+    user_metadata: {
+      role: 'tester',
+      full_name: 'Test Tester',
+      device_type: 'desktop',
+      tech_comfort_level: 'non_technical',
+      phone_verified: true,
+    },
+    created_at: new Date().toISOString(),
+  });
+  profiles.set('user_mock_tester_id', {
+    id: 'user_mock_tester_id',
+    role: 'tester',
+    full_name: 'Test Tester',
+    device_type: 'desktop',
+    tech_comfort_level: 'non_technical',
+    phone_verified: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
   globalRef.mockDb = {
-    users: new Map<string, MockUser>(),
-    profiles: new Map<string, MockProfile>(),
-    listings: new Map<string, MockListing>(),
-    tasks: new Map<string, MockTask>(),
-    submissions: new Map<string, MockSubmission>(),
-    taskResponses: new Map<string, MockTaskResponse>(),
-    submissionComments: new Map<string, MockComment>(),
-    notifications: new Map<string, MockNotification>(),
-    posterPaymentSettings: new Map<string, MockPosterPaymentSettings>(),
+    users,
+    profiles,
+    listings,
+    tasks,
+    submissions,
+    taskResponses,
+    submissionComments,
+    notifications,
+    posterPaymentSettings,
   };
 }
 const db = globalRef.mockDb;
