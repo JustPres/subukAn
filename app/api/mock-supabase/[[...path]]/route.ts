@@ -98,6 +98,14 @@ interface MockNotification {
   created_at: string;
 }
 
+interface MockPosterPaymentSettings {
+  id: string;
+  payment_settings: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
 interface MockDb {
   users: Map<string, MockUser>;
   profiles: Map<string, MockProfile>;
@@ -107,6 +115,7 @@ interface MockDb {
   taskResponses: Map<string, MockTaskResponse>;
   submissionComments: Map<string, MockComment>;
   notifications: Map<string, MockNotification>;
+  posterPaymentSettings: Map<string, MockPosterPaymentSettings>;
 }
 
 const globalRef = globalThis as typeof globalThis & { mockDb?: MockDb };
@@ -120,6 +129,7 @@ if (!globalRef.mockDb) {
     taskResponses: new Map<string, MockTaskResponse>(),
     submissionComments: new Map<string, MockComment>(),
     notifications: new Map<string, MockNotification>(),
+    posterPaymentSettings: new Map<string, MockPosterPaymentSettings>(),
   };
 }
 const db = globalRef.mockDb;
@@ -163,6 +173,9 @@ interface RequestBody {
 }
 
 export async function GET(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
   const path = params.path?.join('/') || '';
   const url = new URL(request.url);
   const acceptHeader = request.headers.get('Accept') || '';
@@ -194,6 +207,17 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
       return NextResponse.json(getResponsePayload(profile, prefersObject));
     }
     return NextResponse.json(Array.from(db.profiles.values()));
+  }
+
+  // REST poster_payment_settings
+  if (path === 'rest/v1/poster_payment_settings') {
+    const idParam = url.searchParams.get('id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const settings = db.posterPaymentSettings.get(id);
+      return NextResponse.json(getResponsePayload(settings, prefersObject));
+    }
+    return NextResponse.json(Array.from(db.posterPaymentSettings.values()));
   }
 
   // 4. REST listings
@@ -310,6 +334,9 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
 }
 
 export async function POST(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
   const path = params.path?.join('/') || '';
   const body = await request.json().catch(() => ({})) as RequestBody;
   const acceptHeader = request.headers.get('Accept') || '';
@@ -338,6 +365,21 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       updated_at: new Date().toISOString(),
     };
     db.profiles.set(userId, profile);
+
+    if (body.user_metadata?.role === 'poster') {
+      const settings: MockPosterPaymentSettings = {
+        id: userId,
+        payment_settings: {
+          sandbox_mode: true,
+          paymongo_public_key: '',
+          paymongo_secret_key: '',
+          gcash_payout_number: ''
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      db.posterPaymentSettings.set(userId, settings);
+    }
 
     return NextResponse.json({ user });
   }
@@ -377,6 +419,31 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
     };
     db.profiles.set(profileId, profile);
     return NextResponse.json(getResponsePayload(profile, prefersObject));
+  }
+
+  // REST poster_payment_settings upsert
+  if (path === 'rest/v1/poster_payment_settings') {
+    const isArray = Array.isArray(body);
+    const items = isArray ? (body as any[]) : [body];
+    const results = items.map(item => {
+      const id = String(item.id || '');
+      const existing = db.posterPaymentSettings.get(id);
+      const payment_settings = item.payment_settings || existing?.payment_settings || {
+        sandbox_mode: true,
+        paymongo_public_key: '',
+        paymongo_secret_key: '',
+        gcash_payout_number: ''
+      };
+      const settings: MockPosterPaymentSettings = {
+        id,
+        payment_settings,
+        created_at: existing?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      db.posterPaymentSettings.set(id, settings);
+      return settings;
+    });
+    return NextResponse.json(getResponsePayload(isArray ? results : results[0], prefersObject));
   }
 
   // 4. REST listings insert
@@ -487,6 +554,9 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
   const path = params.path?.join('/') || '';
   const url = new URL(request.url);
   const body = await request.json().catch(() => ({})) as RequestBody;
@@ -529,6 +599,24 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
     }
   }
 
+  // REST poster_payment_settings update
+  if (path === 'rest/v1/poster_payment_settings') {
+    const idParam = url.searchParams.get('id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      const settings = db.posterPaymentSettings.get(id);
+      if (settings) {
+        const updated: MockPosterPaymentSettings = {
+          ...settings,
+          ...body,
+          updated_at: new Date().toISOString(),
+        };
+        db.posterPaymentSettings.set(id, updated);
+        return NextResponse.json(getResponsePayload(updated, prefersObject));
+      }
+    }
+  }
+
   // 3. REST notifications update
   if (path === 'rest/v1/notifications') {
     const idParam = url.searchParams.get('id');
@@ -559,10 +647,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
   return POST(request, { params });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { path?: string[] } }) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
   const path = params.path?.join('/') || '';
   const url = new URL(request.url);
 
@@ -592,6 +686,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { path?
           db.notifications.delete(id);
         }
       });
+    }
+    return new NextResponse(null, { status: 204 });
+  }
+
+  if (path === 'rest/v1/poster_payment_settings') {
+    const idParam = url.searchParams.get('id');
+    if (idParam && idParam.startsWith('eq.')) {
+      const id = idParam.substring(3);
+      db.posterPaymentSettings.delete(id);
     }
     return new NextResponse(null, { status: 204 });
   }
