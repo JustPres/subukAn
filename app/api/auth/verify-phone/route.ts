@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { createRouteHandlerClient } from '@/lib/supabase/server';
+import crypto from 'crypto';
 
 // Zod schemas for input validation
 const sendOtpSchema = z.object({
@@ -20,6 +21,7 @@ type OtpEntry = {
   phoneNumber: string;
   expiresAt: number;
   lastSentAt: number;
+  attempts: number;
 };
 
 // Global in-memory OTP cache to survive hot reloads during development
@@ -133,7 +135,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Generate 4-digit code
-    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpCode = crypto.randomInt(1000, 10000).toString();
     const expiresAt = now + 5 * 60 * 1000; // 5 minutes validity
 
     // Store in cache
@@ -142,6 +144,7 @@ export async function POST(req: NextRequest) {
       phoneNumber,
       expiresAt,
       lastSentAt: now,
+      attempts: 0,
     });
 
     // 5. Dispatch SMS (Mock in dev/standard HTTP SMS in prod)
@@ -243,10 +246,21 @@ export async function PUT(req: NextRequest) {
 
     // 4. Validate matching code
     if (entry.code !== code) {
-      return NextResponse.json(
-        { error: 'Invalid verification code.' },
-        { status: 400 }
-      );
+      entry.attempts += 1;
+      
+      if (entry.attempts >= 3) {
+        otpCache.delete(user.id);
+        return NextResponse.json(
+          { error: 'Verification failed due to too many invalid attempts. Please request a new verification code.' },
+          { status: 400 }
+        );
+      } else {
+        const remaining = 3 - entry.attempts;
+        return NextResponse.json(
+          { error: `Invalid verification code. ${remaining} attempt(s) remaining.` },
+          { status: 400 }
+        );
+      }
     }
 
     // OTP verified! Clean from cache.
