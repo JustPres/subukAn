@@ -40,6 +40,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     fetchProfile()
   }, [])
 
+  const headerTitle = pathname.includes('/poster')
+    ? 'Poster Workspace'
+    : pathname.includes('/tester')
+    ? 'Tester Hub'
+    : role === 'poster'
+    ? 'Poster Workspace'
+    : role === 'tester'
+    ? 'Tester Hub'
+    : 'Dashboard'
+
   const isGatePage = pathname === '/dashboard'
 
   if (isGatePage) {
@@ -55,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-canvas relative">
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/15 blur-[120px] pointer-events-none z-0" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/15 blur-[120px] pointer-events-none z-0" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/10 blur-[120px] pointer-events-none z-0" />
       
       <DashboardSidebar 
@@ -73,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Menu className="h-6 w-6" />
             </button>
-            <span className="font-extrabold text-lg text-gray-900 tracking-tight">subukAn</span>
+            <span className="font-extrabold text-lg text-gray-900 tracking-tight">{headerTitle}</span>
           </div>
 
           <div className="flex items-center gap-3">

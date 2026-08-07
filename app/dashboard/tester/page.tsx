@@ -610,147 +610,7 @@ function TesterDashboardContent() {
             </button>
           </div>
 
-          {/* Balance Card (Premium Wise-Inspired Hero) */}
-          <div className="bg-[#2955E3] shadow-xl rounded-2xl p-6 relative overflow-hidden hover-lift flex flex-col md:flex-row md:items-center justify-between gap-6">
-            
-            <div className="space-y-2 relative z-10">
-              <span className="text-xs text-indigo-100/90 font-bold tracking-wider uppercase block">Withdrawable Balance</span>
-              <div className="space-y-1">
-                <span className="font-mono-numbers text-3xl font-extrabold text-white tracking-tight block">
-                  ₱{withdrawableBalance.toFixed(2)}
-                </span>
-                <span className="text-xs text-indigo-100/70 font-medium block">
-                  ≈ USD {(withdrawableBalance * 0.018).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-indigo-100/90 pt-1">
-                <span className="font-mono font-medium">{maskGcashNumber(gcashNumber)}</span>
-                <span className="bg-white/20 text-white rounded-full px-2 py-0.5 font-bold uppercase text-[9px]">
-                  Verified
-                </span>
-                <span className="text-white/20">|</span>
-                <button 
-                  onClick={() => switchTab('earnings')}
-                  className="font-bold hover:underline inline-flex items-center gap-1 text-white"
-                >
-                  View Earnings History →
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowPayoutModal(true)}
-              disabled={withdrawableBalance === 0}
-              className="relative z-10 px-6 py-3 bg-white text-blue-600 hover:bg-slate-50 disabled:bg-white/50 disabled:text-blue-600/60 font-bold rounded-[8px] text-sm transition-all whitespace-nowrap self-start md:self-center hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Withdraw Earnings
-            </button>
-          </div>
 
-          {/* Quick Stats Grid (Stripe-Inspired Minimalist Cards) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div 
-              onClick={() => switchTab('available')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
-            >
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Tasks Available</span>
-                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">{listings.length}</span>
-                <span className="text-[10px] text-blue-600 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Find new opportunities &rarr;</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-blue-50/70 text-blue-600 border border-blue-100/50 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-blue-100/50">
-                <Search className="w-5 h-5" />
-              </div>
-            </div>
-
-            <div 
-              onClick={() => switchTab('submissions')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
-            >
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Active Tasks</span>
-                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
-                  {submissions.filter(s => s.status === 'in_progress').length}
-                </span>
-                <span className="text-[10px] text-amber-600 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Keep it going &rarr;</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-amber-50/70 text-amber-600 border border-amber-100/50 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-amber-100/50">
-                <Clock className="w-5 h-5" />
-              </div>
-            </div>
-
-            <div 
-              onClick={() => switchTab('submissions')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
-            >
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
-                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
-                  {submissions.filter(s => s.status === 'approved').length}
-                </span>
-                <span className="text-[10px] text-emerald-600 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Great job! &rarr;</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50/70 text-emerald-600 border border-emerald-100/50 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-emerald-100/50">
-                <CheckCircle className="w-5 h-5" />
-              </div>
-            </div>
-
-            <div 
-              onClick={() => switchTab('earnings')} 
-              className="bg-white border border-slate-200/85 p-5 rounded-[12px] shadow-sm hover-lift cursor-pointer transition-all duration-200 flex items-center justify-between group"
-            >
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Earnings</span>
-                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
-                  ₱{totalEarnedValue.toFixed(2)}
-                </span>
-                <span className="text-[10px] text-slate-500 font-semibold block opacity-95 group-hover:opacity-100 transition-opacity">Keep earning &rarr;</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-slate-50/80 text-slate-700 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-xs transition-colors group-hover:bg-slate-100/50">
-                <DollarSign className="w-5 h-5" />
-              </div>
-            </div>
-          </div>
-
-          {/* Main Navigation Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8" aria-label="Tabs">
-              <button
-                onClick={() => switchTab('available')}
-                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
-                  activeTab === 'available'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Available Tests ({listings.length})</span>
-              </button>
-
-              <button
-                onClick={() => switchTab('submissions')}
-                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
-                  activeTab === 'submissions'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <CheckSquare className="w-4 h-4" />
-                <span>My Submissions ({submissions.length})</span>
-              </button>
-
-              <button
-                onClick={() => switchTab('earnings')}
-                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-extrabold text-sm transition-all ${
-                  activeTab === 'earnings'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <DollarSign className="w-4 h-4" />
-                <span>Earnings & Payout History</span>
-              </button>
-            </nav>
-          </div>
 
           {/* Tab 1: Available Tests (Linear-Style List Rows) */}
           {activeTab === 'available' && (
@@ -781,7 +641,7 @@ function TesterDashboardContent() {
                     return (
                       <div 
                         key={job.id} 
-                        className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover:bg-slate-50/50 ${
+                        className={`px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover:bg-slate-50/50 ${
                           isFull ? 'opacity-60' : ''
                         }`}
                       >
@@ -853,7 +713,7 @@ function TesterDashboardContent() {
                         </div>
     
                         <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
-                          <span className="text-base font-extrabold text-slate-900 font-mono-numbers">
+                          <span className="text-base font-extrabold text-slate-900 font-mono tabular-nums">
                             ₱{job.rate_per_tester}
                           </span>
                           <Link
@@ -894,7 +754,7 @@ function TesterDashboardContent() {
                 <div className="bg-white border border-slate-200/80 rounded-[12px] overflow-hidden shadow-sm divide-y divide-slate-100">
                   {submissions.map((sub) => {
                     return (
-                      <div key={sub.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
+                      <div key={sub.id} className="px-4 py-3 space-y-3 hover:bg-slate-50/50 transition-colors">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-center gap-3.5 min-w-0 flex-1">
                             {/* Glowing Status Dot */}
@@ -945,7 +805,7 @@ function TesterDashboardContent() {
                           </div>
 
                           <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
-                            <span className="text-base font-extrabold text-slate-900 font-mono-numbers">
+                            <span className="text-base font-extrabold text-slate-900 font-mono tabular-nums">
                               ₱{sub.rate_per_tester}
                             </span>
                             <Link
@@ -1007,30 +867,45 @@ function TesterDashboardContent() {
           {/* Tab 3: Earnings & Payout History */}
           {activeTab === 'earnings' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white border border-slate-200/80 rounded-[12px] p-5 shadow-sm hover-lift transition-all">
+              {/* Wallet / Balance Card */}
+              <div className="bg-[#2955E3] rounded-[12px] p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <span className="text-xs text-indigo-100/90 font-bold tracking-wider uppercase block">Withdrawable Balance</span>
+                  <div className="space-y-1">
+                    <span className="font-mono tabular-nums text-3xl font-extrabold text-white tracking-tight block">
+                      ₱{withdrawableBalance.toFixed(2)}
+                    </span>
+                    <span className="text-xs text-indigo-100/70 font-medium block">
+                      ≈ USD {(withdrawableBalance * 0.018).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-indigo-100/90 pt-1">
+                    <span className="font-mono tabular-nums font-medium">{maskGcashNumber(gcashNumber)}</span>
+                    <span className="bg-white/20 text-white rounded-full px-2 py-0.5 font-bold uppercase text-[9px]">
+                      Verified
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPayoutModal(true)}
+                  disabled={withdrawableBalance === 0}
+                  className="px-6 py-3 bg-white text-[#2955E3] hover:bg-slate-50 disabled:bg-white/50 disabled:text-[#2955E3]/60 font-bold rounded-[8px] text-sm transition-all whitespace-nowrap self-start md:self-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Withdraw Earnings
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] p-5 shadow-sm transition-all">
                   <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-1">Total Earnings</span>
-                  <span className="text-2xl font-extrabold text-slate-900 font-mono-numbers tracking-tight">₱{totalEarnings.toFixed(2)}</span>
+                  <span className="text-2xl font-extrabold text-slate-900 font-mono tabular-nums tracking-tight">₱{totalEarnings.toFixed(2)}</span>
                 </div>
 
-                <div className="bg-white border border-emerald-200/80 rounded-[12px] p-5 shadow-sm bg-emerald-50/30 hover-lift transition-all">
-                  <span className="text-xs text-emerald-800 font-semibold block uppercase tracking-wider mb-1">Withdrawable Balance</span>
-                  <span className="text-2xl font-extrabold text-emerald-700 font-mono-numbers tracking-tight">₱{withdrawableBalance.toFixed(2)}</span>
-                </div>
-
-                <div className="bg-white border border-slate-200/80 rounded-[12px] p-5 shadow-sm flex flex-col justify-between hover-lift transition-all">
+                <div className="bg-white border border-slate-200/80 rounded-[12px] p-5 shadow-sm flex flex-col justify-between transition-all">
                   <div>
                     <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-1">Completed Payouts</span>
-                    <span className="text-2xl font-extrabold text-slate-900 font-mono-numbers tracking-tight">{payouts.length} Transactions</span>
+                    <span className="text-2xl font-extrabold text-slate-900 font-mono tabular-nums tracking-tight">{payouts.length} Transactions</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowPayoutModal(true)}
-                    disabled={withdrawableBalance === 0}
-                    className="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-[8px] text-xs shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Request GCash Payout
-                  </button>
                 </div>
               </div>
 
@@ -1060,9 +935,9 @@ function TesterDashboardContent() {
                         {payouts.map(p => (
                           <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-4 font-mono font-bold text-slate-900">{p.reference_id}</td>
-                            <td className="p-4 text-slate-650 font-mono-numbers">{new Date(p.created_at).toLocaleString()}</td>
-                            <td className="p-4 text-slate-700 font-mono">{maskGcashNumber(p.gcash_number)}</td>
-                            <td className="p-4 font-extrabold text-emerald-700 font-mono-numbers">₱{p.amount.toFixed(2)}</td>
+                            <td className="p-4 text-slate-500 font-mono tabular-nums">{new Date(p.created_at).toLocaleString()}</td>
+                            <td className="p-4 text-slate-700 font-mono tabular-nums">{maskGcashNumber(p.gcash_number)}</td>
+                            <td className="p-4 font-extrabold text-emerald-700 font-mono tabular-nums">₱{p.amount.toFixed(2)}</td>
                             <td className="p-4">
                               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold uppercase text-[10px]">
                                 {p.status}

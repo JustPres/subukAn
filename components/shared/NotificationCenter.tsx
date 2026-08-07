@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { 
   Bell, 
   X, 
@@ -25,7 +26,7 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
     type: 'payout_approved',
     is_read: false,
     created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 mins ago
-    link_url: '/dashboard/tester#earnings'
+    link_url: '/dashboard/tester?tab=earnings'
   },
   {
     id: 'n2',
@@ -35,7 +36,7 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
     type: 'submission_update',
     is_read: false,
     created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
-    link_url: '/dashboard/tester#submissions'
+    link_url: '/dashboard/tester?tab=submissions'
   },
   {
     id: 'n3',
@@ -45,7 +46,7 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
     type: 'new_listing',
     is_read: true,
     created_at: new Date(Date.now() - 1000 * 60 * 360).toISOString(), // 6 hours ago
-    link_url: '/dashboard/tester#available'
+    link_url: '/dashboard/tester?tab=available'
   },
   {
     id: 'n4',
@@ -55,15 +56,34 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
     type: 'dispute_update',
     is_read: true,
     created_at: new Date(Date.now() - 1000 * 60 * 1440).toISOString(), // 1 day ago
-    link_url: '/dashboard/tester#submissions'
+    link_url: '/dashboard/tester?tab=submissions'
   }
 ]
 
 export function NotificationCenter() {
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(DEFAULT_NOTIFICATIONS)
   const [loading, setLoading] = useState(false)
   const supabase = createBrowserClient()
+
+  const formatLink = (url: string) => {
+    if (!url) return ''
+    return url
+      .replace('#submissions', '?tab=submissions')
+      .replace('#earnings', '?tab=earnings')
+      .replace('#available', '?tab=available')
+      .replace('#listings', '?tab=listings')
+      .replace('#overview', '?tab=overview')
+      .replace('#settings', '?tab=settings')
+  }
+
+  const getFooterHref = () => {
+    if (pathname.includes('/poster')) {
+      return '/dashboard/poster?tab=overview'
+    }
+    return '/dashboard/tester?tab=submissions'
+  }
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -207,7 +227,7 @@ export function NotificationCenter() {
         key={notif.id}
         onClick={() => handleMarkAsRead(notif.id)}
         className={`p-4 transition-all duration-150 cursor-pointer flex items-start gap-3 relative group ${
-          notif.is_read ? 'bg-white hover:bg-slate-50/50' : 'bg-indigo-50/20 hover:bg-indigo-50/40'
+          notif.is_read ? 'bg-white hover:bg-slate-50/50' : 'bg-[#2955E3]/5 hover:bg-[#2955E3]/10'
         }`}
       >
         {renderIcon(notif.type)}
@@ -217,20 +237,20 @@ export function NotificationCenter() {
             <h4 className="text-xs font-bold text-[#0F172A] truncate">
               {notif.title}
             </h4>
-            <span className="text-[10px] text-slate-400 shrink-0 ml-2">
+            <span className="text-[10px] text-slate-500 shrink-0 ml-2">
               {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
           
-          <p className="text-xs text-slate-600 leading-relaxed break-words">
+          <p className="text-xs text-slate-800 leading-relaxed break-words font-medium">
             {notif.message}
           </p>
 
           {notif.link_url && (
             <a
-              href={notif.link_url}
+              href={formatLink(notif.link_url)}
               onClick={() => setIsOpen(false)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6366F1] hover:text-[#4F46E5] mt-1.5 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2955E3] hover:text-[#1D4ED8] mt-1.5 transition-colors"
             >
               View Details <ExternalLink className="w-3 h-3" />
             </a>
@@ -239,7 +259,7 @@ export function NotificationCenter() {
 
         <div className="flex flex-col items-center justify-between h-full py-0.5 self-stretch shrink-0">
           {!notif.is_read ? (
-            <span className="w-2.5 h-2.5 rounded-full bg-[#6366F1] shrink-0 mt-1" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#2955E3] shrink-0 mt-1" />
           ) : (
             <div className="w-2.5 h-2.5" />
           )}
@@ -269,7 +289,7 @@ export function NotificationCenter() {
         aria-label="Open notifications"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="relative p-2.5 rounded-full text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
+        className="relative p-2.5 rounded-full text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2955E3]"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -286,7 +306,7 @@ export function NotificationCenter() {
             className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="absolute right-0 mt-2.5 z-50 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fadeIn flex flex-col max-h-[500px]">
+          <div className="absolute right-0 mt-2.5 z-50 w-96 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fadeIn flex flex-col max-h-[500px]">
             {/* Drawer Header */}
             <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -345,7 +365,7 @@ export function NotificationCenter() {
                 <div className="flex flex-col">
                   {todayNotifs.length > 0 && (
                     <div className="flex flex-col">
-                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-400 tracking-wider border-b border-slate-100 select-none">
+                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-500 tracking-wider border-b border-slate-100 select-none">
                         TODAY
                       </div>
                       <div className="divide-y divide-slate-100">
@@ -355,7 +375,7 @@ export function NotificationCenter() {
                   )}
                   {earlierNotifs.length > 0 && (
                     <div className="flex flex-col">
-                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-400 tracking-wider border-y border-slate-100 select-none">
+                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-500 tracking-wider border-y border-slate-100 select-none">
                         EARLIER
                       </div>
                       <div className="divide-y divide-slate-100">
@@ -370,9 +390,9 @@ export function NotificationCenter() {
             {/* Drawer Footer */}
             <div className="p-3 bg-slate-50 border-t border-slate-200 text-center shrink-0">
               <a
-                href="/dashboard/tester?tab=submissions"
+                href={getFooterHref()}
                 onClick={() => setIsOpen(false)}
-                className="text-xs font-bold text-[#6366F1] hover:text-[#4F46E5] hover:underline"
+                className="text-xs font-bold text-[#2955E3] hover:text-[#1D4ED8] hover:underline"
               >
                 See all notifications →
               </a>
