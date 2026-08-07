@@ -60,15 +60,15 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-ink text-canvas transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:flex lg:flex-col ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#0F172A] text-white transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:flex lg:flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center justify-between px-6 border-b border-slate/20">
-          <span className="text-xl font-semibold tracking-tight">subukAn</span>
+        <div className="flex h-16 items-center justify-between px-6 border-b border-slate-800">
+          <span className="text-xl font-extrabold tracking-tight text-white font-poppins">subukAn</span>
           <button 
             onClick={() => onToggle(false)}
-            className="lg:hidden text-canvas hover:text-steel transition-colors"
+            className="lg:hidden text-slate-400 hover:text-white transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -95,10 +95,10 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
                 key={link.name} 
                 href={link.href}
                 onClick={() => onToggle(false)}
-                className={`flex items-center space-x-3 rounded-button px-4 py-3 transition-all duration-200 ${
+                className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200 ${
                   isActive 
-                    ? 'bg-primary-brand text-white shadow-md' 
-                    : 'text-steel hover:bg-slate/20 hover:text-canvas'
+                    ? 'bg-[#6366F1] text-white shadow-lg shadow-indigo-500/25 font-semibold' 
+                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -108,11 +108,11 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
           })}
         </nav>
 
-        <div className="border-t border-slate/20 p-4 space-y-2">
+        <div className="border-t border-slate-800 p-4 space-y-2">
           <Link 
             href="/dashboard?select=true"
             onClick={() => onToggle(false)}
-            className="flex items-center space-x-3 rounded-button px-4 py-3 text-steel hover:bg-slate/20 hover:text-canvas transition-all duration-200"
+            className="flex items-center space-x-3 rounded-lg px-4 py-3 text-slate-400 hover:bg-slate-800/60 hover:text-white transition-all duration-200"
           >
             <ArrowLeftRight className="h-5 w-5" />
             <span className="font-medium">Switch Role</span>
@@ -120,7 +120,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
           
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 rounded-button px-4 py-3 text-tint-rejected-text hover:bg-tint-rejected-bg transition-all duration-200"
+            className="w-full flex items-center space-x-3 rounded-lg px-4 py-3 text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-all duration-200"
           >
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Logout</span>

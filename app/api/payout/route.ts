@@ -254,19 +254,19 @@ export async function POST(request: NextRequest) {
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(submission.tester_id);
     const testerPhone = authUser?.user?.phone || '09171234567'; // Fallback to mock PH phone for testing if phone is blank
 
-    // Fetch poster profile details to retrieve payment_settings
+    // Fetch poster secure payment settings details
     let customSettings = null;
     try {
-      const { data: posterProfile } = await supabaseAdmin
-        .from('profiles')
+      const { data: settingsRow } = await supabaseAdmin
+        .from('poster_payment_settings')
         .select('payment_settings')
         .eq('id', listing.poster_id)
         .single();
-      if (posterProfile?.payment_settings) {
-        customSettings = posterProfile.payment_settings;
+      if (settingsRow?.payment_settings) {
+        customSettings = settingsRow.payment_settings;
       }
     } catch (e) {
-      console.warn('Failed to fetch poster profile customSettings:', e);
+      console.warn('Failed to fetch poster payment settings customSettings:', e);
     }
 
     try {

@@ -4,11 +4,12 @@
 
 @layer base {
   :root {
-    --color-primary: #2955E3;
-    --color-ink: #1E1E1E;
-    --color-slate: #5E5E5E;
+    --color-primary: #6366F1;
+    --color-primary-dark: #4F46E5;
+    --color-ink: #0F172A;
+    --color-slate: #475569;
     --color-steel: #C2C2C2;
-    --color-canvas: #FCFBF9;
+    --color-canvas: #F1F5F9;
 
     /* Notion-style status pastels */
     --tint-open-bg: #E0F2FE;
@@ -33,8 +34,12 @@
   body {
     background-color: var(--color-canvas);
     color: var(--color-ink);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     line-height: 1.55;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-poppins), sans-serif;
   }
 }
 
@@ -111,5 +116,14 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
+  }
+
+  /* Redesign: Hover Lift Effect */
+  .hover-lift {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.15);
   }
 }

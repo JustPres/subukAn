@@ -49,6 +49,8 @@ function PosterDashboardContent() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
+  const [profile, setProfile] = useState<any>(null)
+
   // Tab & Custom Payment Settings states
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -114,14 +116,25 @@ function PosterDashboardContent() {
       setUser(user)
 
       // Fetch user profile settings
-      const { data: profile } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+      
+      if (profileData) {
+        setProfile(profileData)
+      }
+
+      // Fetch payment settings from secure poster_payment_settings table
+      const { data: paymentData } = await supabase
+        .from('poster_payment_settings')
         .select('payment_settings')
         .eq('id', user.id)
         .single()
       
-      if (profile?.payment_settings) {
-        setPaymentSettings(prev => ({ ...prev, ...profile.payment_settings }))
+      if (paymentData && paymentData.payment_settings) {
+        setPaymentSettings(prev => ({ ...prev, ...paymentData.payment_settings }))
       }
 
       const { data, error } = await supabase
@@ -177,9 +190,8 @@ function PosterDashboardContent() {
     
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({ payment_settings: paymentSettings })
-        .eq('id', user.id)
+        .from('poster_payment_settings')
+        .upsert({ id: user.id, payment_settings: paymentSettings })
         
       if (error) throw error
       setSettingsSuccess('Payment settings updated successfully!')
@@ -613,32 +625,37 @@ function PosterDashboardContent() {
   return (
     <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
       {/* Back button */}
-      <Link href="/dashboard" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-900 text-sm">
+      <Link href="/dashboard" className="inline-flex items-center gap-1 text-slate-500 hover:text-[#0F172A] text-sm font-medium transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to Dashboard selection
       </Link>
 
       {/* Page Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <Briefcase className="w-10 h-10 text-gray-700 mb-2" />
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Poster Workspace</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Fund testing rounds, review tester evidence, and release escrow payouts.
-        </p>
+      <div className="border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 font-poppins flex items-center gap-2">
+            Poster Workspace
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">
+            Welcome back, {profile?.full_name || 'Poster'} 👋 Ready to review some tests today?
+          </p>
+        </div>
       </div>
 
       {/* Escrow Ledger Card (The One Loud Element) */}
-      <div className="bg-[#2955E3] text-white p-6 rounded-[20px] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <span className="text-xs text-white/70 font-semibold tracking-wider uppercase block">Total Escrow Funds Locked</span>
-          <span className="text-4xl font-black font-mono-numbers block">
-            ₱{calculateEscrowFunds().toLocaleString()}
-          </span>
-          <div className="flex items-center gap-3 text-xs text-white/80">
-            <span className="bg-white/20 text-white rounded-full px-2.5 py-0.5 font-bold uppercase text-[10px]">
+      <div className="bg-gradient-to-r from-[#6366F1] to-[#4F46E5] text-white p-6 rounded-2xl shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 hover-lift">
+        <div className="space-y-2 relative z-10">
+          <span className="text-xs text-indigo-100/80 font-bold tracking-wider uppercase block">Total Escrow Funds Locked</span>
+          <div className="space-y-1">
+            <span className="text-4xl font-black font-mono-numbers block tracking-tight">
+              ₱{calculateEscrowFunds().toLocaleString()}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-indigo-100/80 pt-1">
+            <span className="bg-white/20 text-white rounded-full px-2 py-0.5 font-bold uppercase text-[9px]">
               PayMongo Account Verified
             </span>
-            <span className="text-white/40">|</span>
-            <span className="font-medium font-mono-numbers">
+            <span className="text-white/20">|</span>
+            <span className="font-semibold font-mono-numbers text-indigo-100/90">
               {listings.filter(l => l.status !== 'released' && l.status !== 'expired').length} Active Listings
             </span>
           </div>
@@ -649,7 +666,7 @@ function PosterDashboardContent() {
             setErrors({})
             setIsModalOpen(true)
           }}
-          className="px-6 py-3 bg-white hover:bg-gray-100 text-[#2955E3] rounded-[8px] text-sm font-extrabold shadow-sm transition-colors whitespace-nowrap self-start md:self-center flex items-center gap-2"
+          className="relative z-10 px-6 py-3 bg-white hover:bg-slate-50 text-[#6366F1] rounded-xl text-sm font-black shadow-md transition-all whitespace-nowrap self-start md:self-center flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
         >
           <Plus className="w-4 h-4" /> Create New Listing
         </button>
@@ -682,29 +699,29 @@ function PosterDashboardContent() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {listings.map(listing => (
-                    <tr key={listing.id} className="hover:bg-gray-50/55 transition-colors border-b border-gray-100 last:border-0">
-                      <td className="p-3 font-semibold text-gray-900 max-w-xs truncate">
-                        <Link href={`/dashboard/poster/listings/${listing.id}`} className="hover:text-blue-600 hover:underline">
+                    <tr key={listing.id} className="hover:bg-indigo-50/10 transition-colors border-b border-slate-200 last:border-0">
+                      <td className="p-3 font-bold text-[#0F172A] max-w-xs truncate">
+                        <Link href={`/dashboard/poster/listings/${listing.id}`} className="hover:text-[#6366F1] hover:underline">
                           {listing.title}
                         </Link>
                       </td>
-                      <td className="p-3 text-gray-600 font-mono-numbers">
+                      <td className="p-3 text-slate-600 font-mono-numbers">
                         <div className="flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-gray-400" />
+                          <Users className="w-3.5 h-3.5 text-slate-400" />
                           <span>{listing.slots_filled} / {listing.slots_count}</span>
                         </div>
                       </td>
-                      <td className="p-3 font-bold text-gray-900 font-mono-numbers">₱{listing.rate_per_tester}</td>
-                      <td className="p-3 text-gray-500 font-bold font-mono-numbers">₱{listing.total_budget}</td>
+                      <td className="p-3 font-black text-[#0F172A] font-mono-numbers">₱{listing.rate_per_tester}</td>
+                      <td className="p-3 text-slate-500 font-extrabold font-mono-numbers">₱{listing.total_budget}</td>
                       <td className="p-3">{getStatusBadge(listing.status)}</td>
-                      <td className="p-3 text-gray-500 font-mono-numbers">{formatDate(listing.created_at)}</td>
+                      <td className="p-3 text-slate-550 font-mono-numbers">{formatDate(listing.created_at)}</td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() => handleDuplicateListing(listing)}
                             title="Duplicate listing"
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-[6px] transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-[#6366F1] hover:bg-indigo-50 rounded-[6px] transition-colors"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
@@ -712,7 +729,7 @@ function PosterDashboardContent() {
                             type="button"
                             onClick={() => handleDownloadReceipt(listing)}
                             title="Download receipt"
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-[6px] transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-[6px] transition-colors"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>

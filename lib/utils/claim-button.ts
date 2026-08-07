@@ -17,6 +17,7 @@ export interface JobListing {
   target_tech_literacy?: string | null;
   target_accessibility_tags?: string[] | null;
   user_submission_status?: SubmissionStatus;
+  site_url?: string | null;
 }
 
 export interface ButtonConfig {

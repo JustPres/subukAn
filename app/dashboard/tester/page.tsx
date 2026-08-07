@@ -27,7 +27,9 @@ import {
   Smartphone,
   User,
   Zap,
-  Target
+  Target,
+  Search,
+  Globe
 } from 'lucide-react'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
@@ -146,7 +148,10 @@ function TesterDashboardContent() {
   const [payouts, setPayouts] = useState<PayoutRecord[]>(DEFAULT_PAYOUTS)
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
-  
+  const totalEarnedValue = withdrawableBalance + payouts
+    .filter(p => p.status === 'completed')
+    .reduce((sum, p) => sum + p.amount, 0)
+
   // Interactive UI state machine for standard workspace inline task demo
   const [currentStep, setCurrentStep] = useState<'idle' | 'agreement' | 'active_task' | 'submitted'>('idle')
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null)
@@ -577,10 +582,11 @@ function TesterDashboardContent() {
           {/* Header Banner */}
           <div className="border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <Smartphone className="w-10 h-10 text-gray-700 mb-2" />
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Tester Workspace</h1>
-              <p className="text-gray-500 text-sm mt-1">
-                Browse funded listings, claim testing slots, track your submissions, and withdraw earnings.
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 font-poppins flex items-center gap-2">
+                Tester Workspace
+              </h1>
+              <p className="text-slate-500 text-sm mt-1 font-medium">
+                Welcome back, {profile?.full_name || 'Tester'} 👋 Ready to test something great today?
               </p>
             </div>
 
@@ -594,28 +600,91 @@ function TesterDashboardContent() {
           </div>
 
           {/* Balance Card (The One Loud Element) */}
-          <div className="bg-[#2955E3] text-white p-6 rounded-[20px] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <span className="text-xs text-white/70 font-semibold tracking-wider uppercase block">Available Balance</span>
-              <span className="text-4xl font-black font-mono-numbers block">
-                ₱{withdrawableBalance.toFixed(2)}
-              </span>
-              <div className="flex items-center gap-3 text-xs text-white/80">
-                <span className="font-mono">{gcashNumber}</span>
-                <span className="bg-white/20 text-white rounded-full px-2.5 py-0.5 font-bold uppercase text-[10px]">
+          <div className="bg-gradient-to-r from-[#6366F1] to-[#4F46E5] text-white p-6 rounded-2xl shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 hover-lift">
+            <div className="space-y-2 relative z-10">
+              <span className="text-xs text-indigo-100/80 font-bold tracking-wider uppercase block">Available Balance</span>
+              <div className="space-y-1">
+                <span className="text-4xl font-black font-mono-numbers block tracking-tight">
+                  ₱{withdrawableBalance.toFixed(2)}
+                </span>
+                <span className="text-xs text-indigo-100/70 font-medium block">
+                  ≈ USD {(withdrawableBalance * 0.018).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-indigo-100/80 pt-1">
+                <span className="font-mono font-medium">{gcashNumber}</span>
+                <span className="bg-white/20 text-white rounded-full px-2 py-0.5 font-bold uppercase text-[9px]">
                   Verified
                 </span>
-                <span className="text-white/40">|</span>
-                <span className="font-medium">{submissions.length} Tasks Recorded</span>
+                <span className="text-white/20">|</span>
+                <button 
+                  onClick={() => switchTab('earnings')}
+                  className="font-bold hover:underline inline-flex items-center gap-1"
+                >
+                  View Earnings History →
+                </button>
               </div>
             </div>
             <button
               onClick={() => setShowPayoutModal(true)}
               disabled={withdrawableBalance === 0}
-              className="px-6 py-3 bg-white hover:bg-gray-100 disabled:bg-white/50 text-[#2955E3] disabled:text-[#2955E3]/60 rounded-[8px] text-sm font-extrabold shadow-sm transition-colors whitespace-nowrap self-start md:self-center"
+              className="relative z-10 px-6 py-3 bg-white hover:bg-slate-50 disabled:bg-white/50 text-[#6366F1] disabled:text-[#6366F1]/60 rounded-xl text-sm font-black shadow-md transition-all whitespace-nowrap self-start md:self-center hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
             >
               Withdraw Earnings
             </button>
+          </div>
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div onClick={() => switchTab('available')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tasks Available</span>
+                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">{listings.length}</span>
+                <span className="text-[10px] text-indigo-600 font-semibold block">Find new opportunities</span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Search className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div onClick={() => switchTab('submissions')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">In Progress</span>
+                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
+                  {submissions.filter(s => s.status === 'in_progress').length}
+                </span>
+                <span className="text-[10px] text-amber-600 font-semibold block">Keep it going</span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div onClick={() => switchTab('submissions')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
+                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
+                  {submissions.filter(s => s.status === 'approved').length}
+                </span>
+                <span className="text-[10px] text-emerald-600 font-semibold block">Great job!</span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div onClick={() => switchTab('earnings')} className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs hover-lift cursor-pointer flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Earnings</span>
+                <span className="text-2xl font-black text-slate-900 block font-mono-numbers">
+                  ₱{totalEarnedValue.toFixed(2)}
+                </span>
+                <span className="text-[10px] text-slate-500 font-semibold block">Keep earning</span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <DollarSign className="w-5 h-5" />
+              </div>
+            </div>
           </div>
 
           {/* Main Navigation Tabs */}
@@ -681,53 +750,74 @@ function TesterDashboardContent() {
                   </button>
                 </div>
               ) : (
-                <div className="bg-white border border-gray-200 rounded-[12px] divide-y divide-gray-100 overflow-hidden shadow-xs">
+                <div className="space-y-4">
                   {listings.map((job) => {
                     const btnConfig = getButtonConfig(job)
                     const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
                     return (
                       <div 
                         key={job.id} 
-                        className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
-                          isFull ? 'bg-gray-50/50 opacity-60' : 'hover:bg-gray-50/50'
+                        className={`p-4 rounded-xl border border-slate-200 bg-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover-lift ${
+                          isFull ? 'opacity-60' : ''
                         }`}
                       >
-                        <div className="space-y-1">
-                          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2 flex-wrap">
-                            {job.title}
-                            {job.is_quick_impression && (
-                              <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/60 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                <Zap className="w-2.5 h-2.5 text-amber-500" /> 5s
-                              </span>
+                        <div className="flex items-center gap-3.5">
+                          {/* Asset Type Circle Icon */}
+                          <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border ${
+                            job.is_quick_impression 
+                              ? 'bg-amber-50 text-amber-600 border-amber-100'
+                              : job.requires_recording
+                                ? 'bg-purple-50 text-purple-600 border-purple-100'
+                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                          }`}>
+                            {job.is_quick_impression ? (
+                              <Zap className="w-5 h-5 animate-pulse" />
+                            ) : job.requires_recording ? (
+                              <Video className="w-5 h-5" />
+                            ) : job.site_url?.includes('app') ? (
+                              <Smartphone className="w-5 h-5" />
+                            ) : (
+                              <Globe className="w-5 h-5" />
                             )}
-                            {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
-                              <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                <Target className="w-2.5 h-2.5 text-purple-500" /> Match
-                              </span>
-                            )}
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-500">
-                            <span>{job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}</span>
-                            <span className="text-gray-300">•</span>
-                            <span className="line-clamp-1 max-w-sm sm:max-w-md">{job.description}</span>
-                            {(job.requires_recording || job.requires_image) && (
-                              <>
-                                <span className="text-gray-300">•</span>
-                                <span className="text-[10px] text-gray-400 font-medium">
-                                  {[job.requires_recording && 'Recording', job.requires_image && 'Screenshot'].filter(Boolean).join(' + ')}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-[#0F172A] text-sm flex items-center gap-2 flex-wrap">
+                              {job.title}
+                              {job.is_quick_impression && (
+                                <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/60 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                  <Zap className="w-2.5 h-2.5 text-amber-500" /> 5s
                                 </span>
-                              </>
-                            )}
+                              )}
+                              {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
+                                <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                  <Target className="w-2.5 h-2.5 text-purple-500" /> Match
+                                </span>
+                              )}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
+                              <span>{job.slots_filled >= job.slots_count ? 'Slots Filled' : `${job.slots_count - job.slots_filled} slots left`}</span>
+                              <span className="text-slate-350 select-none">•</span>
+                              <span className="line-clamp-1 max-w-sm sm:max-w-md">{job.description}</span>
+                              {(job.requires_recording || job.requires_image) && (
+                                <>
+                                  <span className="text-slate-350 select-none">•</span>
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                    {[job.requires_recording && 'Recording', job.requires_image && 'Screenshot'].filter(Boolean).join(' + ')}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
     
                         <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
-                          <span className="text-lg font-black text-gray-900 font-mono-numbers">
+                          <span className="text-lg font-black text-[#0F172A] font-mono-numbers">
                             ₱{job.rate_per_tester}
                           </span>
                           <Link
                             href={btnConfig.href}
-                            className={`px-4 py-2 font-extrabold text-xs rounded-button border text-center transition-all ${btnConfig.className}`}
+                            className={`px-4 py-2 font-extrabold text-xs rounded-lg border text-center transition-all ${btnConfig.className}`}
                             onClick={(e) => {
                               if (btnConfig.disabled) {
                                 e.preventDefault()

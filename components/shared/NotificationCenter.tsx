@@ -154,40 +154,111 @@ export function NotificationCenter() {
     }
   }
 
+  const isToday = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr)
+      const now = new Date()
+      return d.getDate() === now.getDate() &&
+             d.getMonth() === now.getMonth() &&
+             d.getFullYear() === now.getFullYear()
+    } catch (e) {
+      return false
+    }
+  }
+
   const renderIcon = (type: Notification['type']) => {
     switch (type) {
       case 'payout_approved':
         return (
-          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
-            <DollarSign className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4.5 h-4.5" />
           </div>
         )
       case 'submission_update':
         return (
-          <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4.5 h-4.5" />
           </div>
         )
       case 'new_listing':
         return (
-          <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
-            <Zap className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-full bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+            <Zap className="w-4.5 h-4.5" />
           </div>
         )
       case 'dispute_update':
         return (
-          <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-4.5 h-4.5" />
           </div>
         )
       default:
         return (
-          <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-full bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-4.5 h-4.5" />
           </div>
         )
     }
   }
+
+  const renderNotificationItem = (notif: Notification) => {
+    return (
+      <div
+        key={notif.id}
+        onClick={() => handleMarkAsRead(notif.id)}
+        className={`p-4 transition-all duration-150 cursor-pointer flex items-start gap-3 relative group ${
+          notif.is_read ? 'bg-white hover:bg-slate-50/50' : 'bg-indigo-50/20 hover:bg-indigo-50/40'
+        }`}
+      >
+        {renderIcon(notif.type)}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <h4 className="text-xs font-bold text-[#0F172A] truncate">
+              {notif.title}
+            </h4>
+            <span className="text-[10px] text-slate-400 shrink-0 ml-2">
+              {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          
+          <p className="text-xs text-slate-600 leading-relaxed break-words">
+            {notif.message}
+          </p>
+
+          {notif.link_url && (
+            <a
+              href={notif.link_url}
+              onClick={() => setIsOpen(false)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6366F1] hover:text-[#4F46E5] mt-1.5 transition-colors"
+            >
+              View Details <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+
+        <div className="flex flex-col items-center justify-between h-full py-0.5 self-stretch shrink-0">
+          {!notif.is_read ? (
+            <span className="w-2.5 h-2.5 rounded-full bg-[#6366F1] shrink-0 mt-1" />
+          ) : (
+            <div className="w-2.5 h-2.5" />
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => handleClearOne(notif.id, e)}
+            title="Dismiss"
+            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 transition-opacity rounded-md hover:bg-slate-100 mt-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const todayNotifs = notifications.filter(n => isToday(n.created_at))
+  const earlierNotifs = notifications.filter(n => !isToday(n.created_at))
 
   return (
     <div className="relative inline-block">
@@ -198,9 +269,9 @@ export function NotificationCenter() {
         aria-label="Open notifications"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="relative p-2.5 rounded-full text-slate hover:text-ink hover:bg-slate/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-brand"
+        className="relative p-2.5 rounded-full text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
       >
-        <Bell className="w-5 h-5 text-gray-700" />
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse">
             {unreadCount}
@@ -212,14 +283,14 @@ export function NotificationCenter() {
       {isOpen && (
         <>
           <div 
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-xs" 
+            className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="absolute right-0 mt-2 z-50 w-80 sm:w-96 bg-white border border-gray-200 rounded-[12px] shadow-xl overflow-hidden animate-fadeIn">
+          <div className="absolute right-0 mt-2.5 z-50 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fadeIn flex flex-col max-h-[500px]">
             {/* Drawer Header */}
-            <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm text-gray-900">Notifications</h3>
+                <h3 className="font-extrabold text-sm text-[#0F172A] font-poppins">Notifications</h3>
                 {unreadCount > 0 && (
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700">
                     {unreadCount} new
@@ -232,24 +303,24 @@ export function NotificationCenter() {
                   <button
                     type="button"
                     onClick={handleMarkAllAsRead}
-                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1"
+                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 transition-colors"
                   >
-                    <Check className="w-3 h-3" /> Mark all read
+                    <Check className="w-3.5 h-3.5" /> Mark all read
                   </button>
                 )}
                 {notifications.length > 0 && (
                   <button
                     type="button"
                     onClick={handleClearAll}
-                    className="text-[11px] font-semibold text-gray-500 hover:text-rose-600 flex items-center gap-1 ml-1"
+                    className="text-[11px] font-bold text-slate-500 hover:text-rose-600 flex items-center gap-1 ml-1 transition-colors"
                   >
-                    <Trash2 className="w-3 h-3" /> Clear
+                    <Trash2 className="w-3.5 h-3.5" /> Clear
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-1 text-gray-400 hover:text-gray-600 rounded-md"
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -257,75 +328,54 @@ export function NotificationCenter() {
             </div>
 
             {/* Notification List */}
-            <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+            <div className="overflow-y-auto divide-y divide-slate-100 flex-1">
               {loading ? (
-                <div className="p-8 text-center text-xs text-gray-400 font-mono">
+                <div className="p-8 text-center text-xs text-slate-400 font-mono">
                   Loading updates...
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center space-y-2">
-                  <Bell className="w-8 h-8 text-gray-300 mx-auto" />
-                  <p className="text-xs font-semibold text-gray-600">No notifications yet</p>
-                  <p className="text-[11px] text-gray-400">Updates regarding payouts, submissions, and alerts will appear here.</p>
+                  <Bell className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No notifications yet</p>
+                  <p className="text-[11px] text-slate-500 leading-normal max-w-xs mx-auto">
+                    Updates regarding payouts, submissions, and alerts will appear here.
+                  </p>
                 </div>
               ) : (
-                notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleMarkAsRead(notif.id)}
-                    className={`p-4 transition-colors cursor-pointer flex items-start gap-3 relative group ${
-                      notif.is_read ? 'bg-white hover:bg-gray-50/80' : 'bg-blue-50/40 hover:bg-blue-50/70'
-                    }`}
-                  >
-                    {renderIcon(notif.type)}
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <h4 className="text-xs font-extrabold text-gray-900 truncate">
-                          {notif.title}
-                        </h4>
-                        <span className="text-[10px] text-gray-400 shrink-0 ml-2">
-                          {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                <div className="flex flex-col">
+                  {todayNotifs.length > 0 && (
+                    <div className="flex flex-col">
+                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-400 tracking-wider border-b border-slate-100 select-none">
+                        TODAY
                       </div>
-                      
-                      <p className="text-xs text-gray-600 leading-relaxed break-words">
-                        {notif.message}
-                      </p>
-
-                      {notif.link_url && (
-                        <a
-                          href={notif.link_url}
-                          onClick={() => setIsOpen(false)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 mt-1.5"
-                        >
-                          View Details <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
+                      <div className="divide-y divide-slate-100">
+                        {todayNotifs.map(renderNotificationItem)}
+                      </div>
                     </div>
-
-                    {!notif.is_read && (
-                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleClearOne(notif.id, e)}
-                      title="Dismiss"
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 transition-opacity"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))
+                  )}
+                  {earlierNotifs.length > 0 && (
+                    <div className="flex flex-col">
+                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-400 tracking-wider border-y border-slate-100 select-none">
+                        EARLIER
+                      </div>
+                      <div className="divide-y divide-slate-100">
+                        {earlierNotifs.map(renderNotificationItem)}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Drawer Footer */}
-            <div className="p-3 bg-gray-50 border-t border-gray-200 text-center">
-              <span className="text-[10px] font-semibold text-gray-400">
-                subukAn Real-Time Event Alerts
-              </span>
+            <div className="p-3 bg-slate-50 border-t border-slate-200 text-center shrink-0">
+              <a
+                href="/dashboard/tester?tab=submissions"
+                onClick={() => setIsOpen(false)}
+                className="text-xs font-bold text-[#6366F1] hover:text-[#4F46E5] hover:underline"
+              >
+                See all notifications →
+              </a>
             </div>
           </div>
         </>

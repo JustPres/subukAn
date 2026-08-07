@@ -65,7 +65,7 @@ test.describe('Tester Flow & Milestone 4 Features E2E', () => {
     // 2. Test Tab Switching: "Earnings & Payout History"
     await page.click('button:has-text("Earnings & Payout History")');
     await expect(page.locator('h3:has-text("GCash Payout History")')).toBeVisible();
-    await expect(page.locator('text=Total Earnings')).toBeVisible();
+    await expect(page.locator('text=Total Earnings').first()).toBeVisible();
 
     // 3. Test Profile Modal
     await page.click('button:has-text("Profile & Notifications")');
